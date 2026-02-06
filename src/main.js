@@ -20,7 +20,8 @@ renderer.setSize(innerWidth, innerHeight);
 document.body.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-scene.fog = new THREE.Fog(0x070a12, 10, 90);
+scene.background = new THREE.Color(0x0b1220);
+scene.fog = new THREE.Fog(0x0b1220, 10, 90);
 
 const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.1, 250);
 
@@ -31,10 +32,10 @@ sun.position.set(10, 18, 6);
 scene.add(sun);
 
 // --- World: "Tierra del Fuego" vibe (stylized realistic)
-const groundMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 1.0 });
-const iceMat = new THREE.MeshStandardMaterial({ color: 0x1f2a44, roughness: 0.85, metalness: 0.05 });
-const metalMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.6, metalness: 0.35 });
-const lightMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.2, metalness: 0.1, emissive: 0x0b1220, emissiveIntensity: 0.25 });
+const groundMat = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 1.0 });
+const iceMat = new THREE.MeshStandardMaterial({ color: 0x25314f, roughness: 0.8, metalness: 0.05 });
+const metalMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.55, metalness: 0.35 });
+const lightMat = new THREE.MeshStandardMaterial({ color: 0xcbd5e1, roughness: 0.2, metalness: 0.1, emissive: 0x0b1220, emissiveIntensity: 0.35 });
 
 const ground = new THREE.Mesh(new THREE.PlaneGeometry(240, 240), groundMat);
 ground.rotation.x = -Math.PI / 2;
@@ -48,12 +49,15 @@ function addBox(x,y,z,w,h,d,mat){
   return m;
 }
 
-// Walls / cover
-addBox(0, 1.2, -14, 30, 2.4, 1.0, metalMat);
-addBox(8, 1.2, -7, 1.0, 2.4, 14, metalMat);
-addBox(-10, 1.2, -3, 18, 2.4, 1.0, metalMat);
-addBox(-18, 1.2, 8, 1.0, 2.4, 28, metalMat);
-addBox(10, 1.2, 10, 28, 2.4, 1.0, metalMat);
+// Walls / cover (put most of the geometry "in front" of the spawn so you immediately see it)
+addBox(0, 1.2, 2, 30, 2.4, 1.0, metalMat);
+addBox(8, 1.2, 9, 1.0, 2.4, 14, metalMat);
+addBox(-10, 1.2, 13, 18, 2.4, 1.0, metalMat);
+addBox(-18, 1.2, 2, 1.0, 2.4, 28, metalMat);
+addBox(10, 1.2, -6, 28, 2.4, 1.0, metalMat);
+
+// Big landmark so you always have something to look at
+addBox(0, 3.0, 24, 10, 6.0, 10, new THREE.MeshStandardMaterial({ color: 0x0ea5e9, roughness: 0.6, metalness: 0.15, emissive: 0x06202a, emissiveIntensity: 0.55 }));
 
 // "ice" patches
 for (let i=0;i<12;i++){
@@ -81,7 +85,8 @@ const state = {
   hp: 100,
   pos: new THREE.Vector3(-6, 1.7, 12),
   velY: 0,
-  yaw: 0,
+  // Start facing towards the outpost (negative Z)
+  yaw: Math.PI,
   pitch: 0,
   onGround: false,
   fire: false,
