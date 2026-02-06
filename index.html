@@ -2,24 +2,36 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Tierra del Fuego 3</title>
     <style>
-      html, body { height:100%; margin:0; background:#05070c; overflow:hidden; }
-      canvas { display:block; width:100%; height:100%; }
+      html, body { height: 100%; margin: 0; overflow: hidden; background:#070a12; }
+      canvas { display:block; }
       #hud {
-        position: fixed; left: 12px; top: 10px; z-index: 20;
+        position: fixed; left: 12px; top: 10px; z-index: 10;
         font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-        color: #e5e7eb; font-size: 14px; line-height: 1.2;
-        user-select: none;
+        color: #e5e7eb; font-size: 14px; line-height: 1.25;
+        user-select:none;
       }
       #hud .k { color:#9ca3af; }
       #hud .pill { display:inline-block; padding:2px 8px; border:1px solid rgba(255,255,255,.15); border-radius:999px; margin-right:6px; }
+      #tip {
+        position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);
+        padding: 10px 14px; border-radius: 10px;
+        background: rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.15);
+        color: #e5e7eb;
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+        z-index: 15;
+      }
 
       /* Touch controls */
-      #touch { position: fixed; inset: 0; z-index: 30; pointer-events: none; }
-      .stickBase {
-        position:absolute; bottom:18px; width:150px; height:150px;
+      #touch {
+        position: fixed; inset: 0; pointer-events: none; z-index: 20;
+        display: none;
+      }
+      .pad {
+        position: absolute;
+        width: 160px; height: 160px;
         border-radius: 999px;
         background: rgba(255,255,255,.06);
         border: 1px solid rgba(255,255,255,.12);
@@ -27,47 +39,53 @@
         pointer-events: auto;
         touch-action: none;
       }
-      #moveBase { left: 18px; }
-      #lookBase { right: 18px; }
       .stick {
-        position:absolute; left:50%; top:50%; transform: translate(-50%, -50%);
-        width:64px; height:64px; border-radius:999px;
-        background: rgba(59,130,246,.65);
+        position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+        width: 68px; height: 68px;
+        border-radius: 999px;
+        background: rgba(249,115,22,.75);
         border: 1px solid rgba(0,0,0,.25);
       }
-      #btnFire, #btnJump, #btnUse {
-        position:absolute; right: 190px;
-        width: 78px; height: 78px;
-        border-radius: 18px;
+      #movePad { left: 18px; bottom: 18px; }
+      #lookPad { right: 18px; bottom: 18px; }
+
+      #btnFire, #btnJump {
+        position: absolute; right: 200px;
+        width: 92px; height: 92px;
+        border-radius: 20px;
         border: 1px solid rgba(255,255,255,.18);
         background: rgba(255,255,255,.08);
-        color:#fff; font-weight:800;
-        pointer-events:auto;
-        touch-action:none;
+        color: #fff;
+        font-weight: 800;
+        pointer-events: auto;
+        touch-action: none;
       }
       #btnFire { bottom: 18px; }
-      #btnJump { bottom: 104px; }
-      #btnUse  { bottom: 190px; width: 64px; height: 64px; border-radius: 16px; font-weight: 900; }
+      #btnJump { bottom: 118px; width: 72px; height: 72px; border-radius: 18px; font-weight: 900; }
 
-      @media (pointer: fine) {
-        #touch { display:none; }
+      @media (pointer: coarse) {
+        #touch { display: block; }
+        #tip { display: none !important; }
       }
     </style>
   </head>
   <body>
     <div id="hud">
       <span class="pill"><span class="k">HP:</span> <span id="hp">100</span></span>
-      <span class="pill"><span class="k">Ammo:</span> <span id="ammo">30</span></span>
-      <span class="pill"><span class="k">Objs:</span> <span id="obj">0/1</span></span>
-      <div class="k" style="margin-top:6px">Celular: joystick mover + joystick mirar · FIRE/JUMP/USE</div>
+      <span class="pill"><span class="k">Ammo:</span> <span id="ammo">∞</span></span>
+      <div class="k" style="margin-top:6px">
+        Desktop: click to lock pointer · Move WASD · Jump Space · Shoot Click
+        <br/>Mobile: left pad move · right pad look · FIRE / J
+      </div>
     </div>
 
+    <div id="tip">Tierra del Fuego 3 — Click to start (desktop) / Tap to play (mobile)</div>
+
     <div id="touch" aria-hidden="true">
-      <div id="moveBase" class="stickBase"><div id="moveStick" class="stick"></div></div>
-      <div id="lookBase" class="stickBase"><div id="lookStick" class="stick"></div></div>
+      <div id="movePad" class="pad"><div id="moveStick" class="stick"></div></div>
+      <div id="lookPad" class="pad"><div id="lookStick" class="stick"></div></div>
       <button id="btnFire" type="button">FIRE</button>
-      <button id="btnJump" type="button">JUMP</button>
-      <button id="btnUse" type="button">E</button>
+      <button id="btnJump" type="button">J</button>
     </div>
 
     <script type="module" src="/src/main.js"></script>
