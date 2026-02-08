@@ -130,6 +130,7 @@ const touch = {
 function setupPad(padEl, stickEl, onMove){
   if (!padEl) return;
   let pid = null;
+  let touchActive = false;
   let center = {x:0,y:0};
   const max = 52;
 
@@ -142,20 +143,24 @@ function setupPad(padEl, stickEl, onMove){
     onMove(sx / max, sy / max);
   };
 
-  const end = (e) => {
-    if (pid !== e.pointerId) return;
-    e.preventDefault();
+  const reset = () => {
     pid = null;
+    touchActive = false;
     if (stickEl) stickEl.style.transform = 'translate(-50%, -50%)';
     onMove(0,0);
   };
 
+  const refreshCenter = () => {
+    const r = padEl.getBoundingClientRect();
+    center = { x: r.left + r.width/2, y: r.top + r.height/2 };
+  };
+
+  // Pointer Events (Android/modern browsers)
   padEl.addEventListener('pointerdown', (e) => {
     e.preventDefault();
     pid = e.pointerId;
     padEl.setPointerCapture?.(pid);
-    const r = padEl.getBoundingClientRect();
-    center = { x: r.left + r.width/2, y: r.top + r.height/2 };
+    refreshCenter();
     setStick(e.clientX - center.x, e.clientY - center.y);
   });
   padEl.addEventListener('pointermove', (e) => {
@@ -163,8 +168,33 @@ function setupPad(padEl, stickEl, onMove){
     e.preventDefault();
     setStick(e.clientX - center.x, e.clientY - center.y);
   });
-  padEl.addEventListener('pointerup', end);
-  padEl.addEventListener('pointercancel', end);
+  padEl.addEventListener('pointerup', (e) => {
+    if (pid !== e.pointerId) return;
+    e.preventDefault();
+    reset();
+  });
+  padEl.addEventListener('pointercancel', () => reset());
+
+  // Touch fallback (Telegram/iOS webviews can be picky)
+  padEl.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    touchActive = true;
+    refreshCenter();
+    const t = e.changedTouches[0];
+    setStick(t.clientX - center.x, t.clientY - center.y);
+  }, { passive: false });
+  padEl.addEventListener('touchmove', (e) => {
+    if (!touchActive) return;
+    e.preventDefault();
+    const t = e.changedTouches[0];
+    setStick(t.clientX - center.x, t.clientY - center.y);
+  }, { passive: false });
+  padEl.addEventListener('touchend', (e) => {
+    if (!touchActive) return;
+    e.preventDefault();
+    reset();
+  }, { passive: false });
+  padEl.addEventListener('touchcancel', () => reset(), { passive: false });
 }
 
 setupPad($movePad, $moveStick, (x,y) => { touch.moveX = x; touch.moveY = y; });
@@ -176,6 +206,10 @@ if ($btnFire) {
   $btnFire.addEventListener('pointerdown', down);
   addEventListener('pointerup', up);
   addEventListener('pointercancel', up);
+  // touch fallback
+  $btnFire.addEventListener('touchstart', down, { passive: false });
+  $btnFire.addEventListener('touchend', up, { passive: false });
+  $btnFire.addEventListener('touchcancel', up, { passive: false });
 }
 if ($btnJump) {
   const down = (e) => { e.preventDefault(); touch.jump = true; };
@@ -183,6 +217,10 @@ if ($btnJump) {
   $btnJump.addEventListener('pointerdown', down);
   addEventListener('pointerup', up);
   addEventListener('pointercancel', up);
+  // touch fallback
+  $btnJump.addEventListener('touchstart', down, { passive: false });
+  $btnJump.addEventListener('touchend', up, { passive: false });
+  $btnJump.addEventListener('touchcancel', up, { passive: false });
 }
 
 // Pointer lock on desktop
