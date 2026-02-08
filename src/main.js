@@ -25,7 +25,7 @@ document.body.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x0b1220);
-scene.fog = new THREE.Fog(0x0b1220, 10, 90);
+scene.fog = new THREE.Fog(0x0b1220, 18, 120);
 
 const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.1, 250);
 
@@ -63,7 +63,16 @@ addBox(-18, 1.2, 2, 1.0, 2.4, 28, metalMat);
 addBox(10, 1.2, -6, 28, 2.4, 1.0, metalMat);
 
 // Big landmark so you always have something to look at
-addBox(0, 3.0, 24, 10, 6.0, 10, new THREE.MeshStandardMaterial({ color: 0x0ea5e9, roughness: 0.6, metalness: 0.15, emissive: 0x06202a, emissiveIntensity: 0.55 }));
+addBox(0, 3.0, 24, 10, 6.0, 10, new THREE.MeshStandardMaterial({ color: 0x0ea5e9, roughness: 0.55, metalness: 0.15, emissive: 0x0ea5e9, emissiveIntensity: 0.45 }));
+const beacon = new THREE.Mesh(
+  new THREE.SphereGeometry(0.9, 18, 12),
+  new THREE.MeshStandardMaterial({ color: 0x67e8f9, emissive: 0x67e8f9, emissiveIntensity: 1.6 })
+);
+beacon.position.set(0, 4.5, 24);
+scene.add(beacon);
+const beaconLight = new THREE.PointLight(0x67e8f9, 2.5, 45, 2);
+beaconLight.position.copy(beacon.position);
+scene.add(beaconLight);
 
 // "ice" patches
 for (let i=0;i<12;i++){
@@ -93,7 +102,7 @@ const state = {
   velY: 0,
   // Start facing the big landmark so first frame is never “empty/black”
   yaw: 0,
-  pitch: -0.03,
+  pitch: 0.18,
   onGround: false,
   fire: false,
 };
