@@ -17,6 +17,10 @@ const isTouch = matchMedia('(pointer: coarse)').matches;
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.setSize(innerWidth, innerHeight);
+// Make colors/lights look correct across phones/browsers
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.25;
 document.body.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
@@ -26,8 +30,10 @@ scene.fog = new THREE.Fog(0x0b1220, 10, 90);
 const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.1, 250);
 
 // --- Lights
-scene.add(new THREE.AmbientLight(0xffffff, 0.25));
-const sun = new THREE.DirectionalLight(0xdbeafe, 1.15);
+scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+const hemi = new THREE.HemisphereLight(0x93c5fd, 0x0f172a, 0.8);
+scene.add(hemi);
+const sun = new THREE.DirectionalLight(0xdbeafe, 1.35);
 sun.position.set(10, 18, 6);
 scene.add(sun);
 
@@ -85,12 +91,19 @@ const state = {
   hp: 100,
   pos: new THREE.Vector3(-6, 1.7, 12),
   velY: 0,
-  // Start facing towards the outpost (negative Z)
-  yaw: Math.PI,
-  pitch: 0,
+  // Start facing the big landmark so first frame is never “empty/black”
+  yaw: 0,
+  pitch: -0.03,
   onGround: false,
   fire: false,
 };
+
+// Force initial heading towards landmark at (0,3,24)
+{
+  const toX = 0 - state.pos.x;
+  const toZ = 24 - state.pos.z;
+  state.yaw = Math.atan2(toX, toZ);
+}
 
 const keys = new Set();
 addEventListener('keydown', (e) => keys.add(e.code));
