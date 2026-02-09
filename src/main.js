@@ -326,6 +326,8 @@ let lastShot = 0;
 let recoilKick = 0;
 let hitMarkerUntil = 0;
 let shotPulseUntil = 0;
+let muzzleFlashUntil = 0;
+let shakeUntil = 0;
 
 // HUD feedback (hit marker)
 const hitMarker = document.createElement('div');
@@ -341,6 +343,15 @@ hitMarker.style.opacity = '0';
 hitMarker.style.transition = 'opacity 50ms linear';
 hitMarker.innerHTML = '<svg viewBox="0 0 100 100" width="26" height="26"><path d="M8 8 L32 32 M92 8 L68 32 M8 92 L32 68 M92 92 L68 68" stroke="#f8fafc" stroke-width="8" stroke-linecap="round"/></svg>';
 document.body.appendChild(hitMarker);
+
+const muzzleFlash = document.createElement('div');
+muzzleFlash.style.position = 'fixed';
+muzzleFlash.style.inset = '0';
+muzzleFlash.style.pointerEvents = 'none';
+muzzleFlash.style.zIndex = '24';
+muzzleFlash.style.opacity = '0';
+muzzleFlash.style.background = 'radial-gradient(circle at 50% 52%, rgba(251,191,36,0.28) 0%, rgba(251,191,36,0.14) 12%, rgba(0,0,0,0) 38%)';
+document.body.appendChild(muzzleFlash);
 
 // Enemies (3 simple drones)
 const enemies = [];
@@ -375,6 +386,7 @@ function doShoot(now){
   lastShot = now;
   recoilKick = Math.min(recoilKick + 0.035, 0.09);
   shotPulseUntil = now + 80;
+  muzzleFlashUntil = now + 45;
 
   // Ray from camera forward
   raycaster.setFromCamera(new THREE.Vector2(0,0), camera);
@@ -388,6 +400,7 @@ function doShoot(now){
     if (enemy){
       enemy.hp -= 1;
       hitMarkerUntil = now + 110;
+      shakeUntil = now + 90;
       // hit flash
       enemy.mesh.material.emissiveIntensity = 1.1;
       setTimeout(() => { try{ enemy.mesh.material.emissiveIntensity = 0.35; } catch{} }, 60);
@@ -499,11 +512,18 @@ function tick(){
   recoilKick = Math.max(0, recoilKick - dt * 0.22);
   camera.rotation.x -= recoilKick;
 
+  if (now < shakeUntil) {
+    const k = (shakeUntil - now) / 90;
+    camera.rotation.x += (Math.random() - 0.5) * 0.018 * k;
+    camera.rotation.y += (Math.random() - 0.5) * 0.018 * k;
+  }
+
   const shotPulse = now < shotPulseUntil;
   crosshair.material.color.set(shotPulse ? 0xf59e0b : 0xe5e7eb);
   crosshair.scale.setScalar(shotPulse ? 0.84 : 1);
 
   hitMarker.style.opacity = now < hitMarkerUntil ? '1' : '0';
+  muzzleFlash.style.opacity = now < muzzleFlashUntil ? '1' : '0';
 
   renderer.render(scene, camera);
   requestAnimationFrame(tick);
