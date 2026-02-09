@@ -13,10 +13,12 @@ const $btnJump = document.getElementById('btnJump');
 const $btnLayout = document.getElementById('btnLayout');
 
 const isTouch = matchMedia('(pointer: coarse)').matches;
+const MOBILE_MAX_DPR = 1.25; // perf guard for webviews/phones
+const DESKTOP_MAX_DPR = 2;
 
 // --- Renderer / Scene / Camera
 const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setPixelRatio(Math.min(devicePixelRatio, isTouch ? MOBILE_MAX_DPR : DESKTOP_MAX_DPR));
 renderer.setSize(innerWidth, innerHeight);
 // Make colors/lights look correct across phones/browsers
 renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -514,8 +516,9 @@ function tick(){
 
   if (now < shakeUntil) {
     const k = (shakeUntil - now) / 90;
-    camera.rotation.x += (Math.random() - 0.5) * 0.018 * k;
-    camera.rotation.y += (Math.random() - 0.5) * 0.018 * k;
+    const amp = isTouch ? 0.010 : 0.018; // less nausea on mobile
+    camera.rotation.x += (Math.random() - 0.5) * amp * k;
+    camera.rotation.y += (Math.random() - 0.5) * amp * k;
   }
 
   const shotPulse = now < shotPulseUntil;
