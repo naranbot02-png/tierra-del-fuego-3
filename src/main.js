@@ -127,6 +127,16 @@ const touch = {
   jump: false,
 };
 
+// Mobile tuning (Sprint 1)
+const MOBILE_LOOK_SENS = 1.65; // lower = less jumpy
+const MOBILE_LOOK_DEADZONE = 0.18;
+
+function applyDeadzone(v, dz) {
+  const a = Math.abs(v);
+  if (a <= dz) return 0;
+  return Math.sign(v) * ((a - dz) / (1 - dz));
+}
+
 function setupPad(padEl, stickEl, onMove){
   if (!padEl) return;
   const hasPointer = ('PointerEvent' in window) && !isTouch;
@@ -226,8 +236,14 @@ function setupPad(padEl, stickEl, onMove){
   }, { passive: false });
 }
 
-setupPad($movePad, $moveStick, (x,y) => { touch.moveX = x; touch.moveY = y; });
-setupPad($lookPad, $lookStick, (x,y) => { touch.lookX = x; touch.lookY = y; });
+setupPad($movePad, $moveStick, (x,y) => {
+  touch.moveX = x;
+  touch.moveY = y;
+});
+setupPad($lookPad, $lookStick, (x,y) => {
+  touch.lookX = applyDeadzone(x, MOBILE_LOOK_DEADZONE);
+  touch.lookY = applyDeadzone(y, MOBILE_LOOK_DEADZONE);
+});
 
 if ($btnFire) {
   const hasPointer = ('PointerEvent' in window) && !isTouch;
@@ -383,9 +399,9 @@ const JUMP = 7.2;
 function updatePlayer(dt){
   // apply touch look (mobile)
   if (isTouch) {
-    // right pad gives -1..1; map to yaw/pitch rates
-    state.yaw -= touch.lookX * dt * 2.2;
-    state.pitch -= touch.lookY * dt * 2.2;
+    // right pad gives -1..1; deadzone + smoother sensitivity for mobile
+    state.yaw -= touch.lookX * dt * MOBILE_LOOK_SENS;
+    state.pitch -= touch.lookY * dt * MOBILE_LOOK_SENS;
     state.pitch = Math.max(-1.25, Math.min(1.0, state.pitch));
   }
 
