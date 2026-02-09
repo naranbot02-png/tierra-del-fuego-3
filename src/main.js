@@ -251,6 +251,24 @@ scene.add(camera);
 // Shooting (raycast)
 const raycaster = new THREE.Raycaster();
 let lastShot = 0;
+let recoilKick = 0;
+let hitMarkerUntil = 0;
+let shotPulseUntil = 0;
+
+// HUD feedback (hit marker)
+const hitMarker = document.createElement('div');
+hitMarker.style.position = 'fixed';
+hitMarker.style.left = '50%';
+hitMarker.style.top = '50%';
+hitMarker.style.width = '26px';
+hitMarker.style.height = '26px';
+hitMarker.style.transform = 'translate(-50%, -50%)';
+hitMarker.style.pointerEvents = 'none';
+hitMarker.style.zIndex = '25';
+hitMarker.style.opacity = '0';
+hitMarker.style.transition = 'opacity 50ms linear';
+hitMarker.innerHTML = '<svg viewBox="0 0 100 100" width="26" height="26"><path d="M8 8 L32 32 M92 8 L68 32 M8 92 L32 68 M92 92 L68 68" stroke="#f8fafc" stroke-width="8" stroke-linecap="round"/></svg>';
+document.body.appendChild(hitMarker);
 
 // Enemies (3 simple drones)
 const enemies = [];
@@ -283,6 +301,8 @@ function updateEnemies(dt){
 function doShoot(now){
   if (now - lastShot < 130) return;
   lastShot = now;
+  recoilKick = Math.min(recoilKick + 0.035, 0.09);
+  shotPulseUntil = now + 80;
 
   // Ray from camera forward
   raycaster.setFromCamera(new THREE.Vector2(0,0), camera);
@@ -295,6 +315,7 @@ function doShoot(now){
     const enemy = enemies.find(e => e.mesh === obj);
     if (enemy){
       enemy.hp -= 1;
+      hitMarkerUntil = now + 110;
       // hit flash
       enemy.mesh.material.emissiveIntensity = 1.1;
       setTimeout(() => { try{ enemy.mesh.material.emissiveIntensity = 0.35; } catch{} }, 60);
@@ -400,6 +421,16 @@ function tick(){
 
   const wantShoot = (!isTouch && pointerLocked && (keys.has('KeyF'))) || state.fire || (!isTouch && pointerLocked && (mouseDown));
   if (wantShoot) doShoot(now);
+
+  // Gunfeel feedback
+  recoilKick = Math.max(0, recoilKick - dt * 0.22);
+  camera.rotation.x -= recoilKick;
+
+  const shotPulse = now < shotPulseUntil;
+  crosshair.material.color.set(shotPulse ? 0xf59e0b : 0xe5e7eb);
+  crosshair.scale.setScalar(shotPulse ? 0.84 : 1);
+
+  hitMarker.style.opacity = now < hitMarkerUntil ? '1' : '0';
 
   renderer.render(scene, camera);
   requestAnimationFrame(tick);
