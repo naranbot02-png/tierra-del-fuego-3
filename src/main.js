@@ -131,6 +131,7 @@ function setupPad(padEl, stickEl, onMove){
   if (!padEl) return;
   let pid = null;
   let touchActive = false;
+  let touchId = null;
   let center = {x:0,y:0};
   const max = 52;
 
@@ -146,6 +147,7 @@ function setupPad(padEl, stickEl, onMove){
   const reset = () => {
     pid = null;
     touchActive = false;
+    touchId = null;
     if (stickEl) stickEl.style.transform = 'translate(-50%, -50%)';
     onMove(0,0);
   };
@@ -176,25 +178,48 @@ function setupPad(padEl, stickEl, onMove){
   padEl.addEventListener('pointercancel', () => reset());
 
   // Touch fallback (Telegram/iOS webviews can be picky)
+  const findTouchById = (list, id) => {
+    for (let i = 0; i < list.length; i++) {
+      if (list[i].identifier === id) return list[i];
+    }
+    return null;
+  };
+
   padEl.addEventListener('touchstart', (e) => {
     e.preventDefault();
-    touchActive = true;
-    refreshCenter();
-    const t = e.changedTouches[0];
-    setStick(t.clientX - center.x, t.clientY - center.y);
+    if (!touchActive) {
+      const t = e.changedTouches[0];
+      if (!t) return;
+      touchActive = true;
+      touchId = t.identifier;
+      refreshCenter();
+      setStick(t.clientX - center.x, t.clientY - center.y);
+    }
   }, { passive: false });
+
   padEl.addEventListener('touchmove', (e) => {
-    if (!touchActive) return;
+    if (!touchActive || touchId == null) return;
     e.preventDefault();
-    const t = e.changedTouches[0];
+    const t = findTouchById(e.touches, touchId) || findTouchById(e.changedTouches, touchId);
+    if (!t) return;
     setStick(t.clientX - center.x, t.clientY - center.y);
   }, { passive: false });
+
   padEl.addEventListener('touchend', (e) => {
-    if (!touchActive) return;
+    if (!touchActive || touchId == null) return;
+    const ended = findTouchById(e.changedTouches, touchId);
+    if (!ended) return;
     e.preventDefault();
     reset();
   }, { passive: false });
-  padEl.addEventListener('touchcancel', () => reset(), { passive: false });
+
+  padEl.addEventListener('touchcancel', (e) => {
+    if (!touchActive || touchId == null) return;
+    const cancelled = findTouchById(e.changedTouches, touchId);
+    if (!cancelled) return;
+    e.preventDefault();
+    reset();
+  }, { passive: false });
 }
 
 setupPad($movePad, $moveStick, (x,y) => { touch.moveX = x; touch.moveY = y; });
