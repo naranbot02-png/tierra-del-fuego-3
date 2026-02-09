@@ -64,6 +64,12 @@
       #btnFire { right: 26px; bottom: 196px; }
       #btnJump { right: 34px; bottom: 300px; width: 72px; height: 72px; border-radius: 18px; font-weight: 900; }
 
+      /* Compact layout: bring controls closer to thumbs */
+      body.layout-compact #movePad { left: 8px; bottom: 8px; width: 148px; height: 148px; }
+      body.layout-compact #lookPad { right: 8px; bottom: 8px; width: 148px; height: 148px; }
+      body.layout-compact #btnFire { right: 10px; bottom: 162px; width: 84px; height: 84px; }
+      body.layout-compact #btnJump { right: 18px; bottom: 252px; width: 64px; height: 64px; }
+
       @media (pointer: coarse) {
         #touch { display: block; }
         #tip { display: none !important; }
@@ -78,6 +84,7 @@
         Desktop: click to lock pointer · Move WASD · Jump Space · Shoot Click
         <br/>Mobile: left pad move · right pad look · FIRE / J
       </div>
+      <button id="btnLayout" type="button" style="margin-top:8px;border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.35);color:#fff;border-radius:999px;padding:4px 10px;font-size:12px;">Layout: Cómodo</button>
     </div>
 
     <div id="tip">Tierra del Fuego 3 — Click to start (desktop) / Tap to play (mobile)</div>

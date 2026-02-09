@@ -10,6 +10,7 @@ const $lookPad = document.getElementById('lookPad');
 const $lookStick = document.getElementById('lookStick');
 const $btnFire = document.getElementById('btnFire');
 const $btnJump = document.getElementById('btnJump');
+const $btnLayout = document.getElementById('btnLayout');
 
 const isTouch = matchMedia('(pointer: coarse)').matches;
 
@@ -135,6 +136,26 @@ function applyDeadzone(v, dz) {
   const a = Math.abs(v);
   if (a <= dz) return 0;
   return Math.sign(v) * ((a - dz) / (1 - dz));
+}
+
+function applyLayout(mode) {
+  const compact = mode === 'compact';
+  document.body.classList.toggle('layout-compact', compact);
+  if ($btnLayout) $btnLayout.textContent = `Layout: ${compact ? 'Compacto' : 'Cómodo'}`;
+  try { localStorage.setItem('tdf3_layout', compact ? 'compact' : 'comfortable'); } catch {}
+}
+
+function initLayoutControl() {
+  let mode = 'comfortable';
+  try { mode = localStorage.getItem('tdf3_layout') || 'comfortable'; } catch {}
+  applyLayout(mode);
+  if ($btnLayout) {
+    $btnLayout.addEventListener('click', (e) => {
+      e.preventDefault();
+      const next = document.body.classList.contains('layout-compact') ? 'comfortable' : 'compact';
+      applyLayout(next);
+    });
+  }
 }
 
 function setupPad(padEl, stickEl, onMove){
@@ -389,6 +410,7 @@ function showStory(){
   $tip.style.display = 'block';
 }
 showStory();
+initLayoutControl();
 addEventListener('click', () => { if (isTouch) { $tip && ($tip.style.display = 'none'); } });
 addEventListener('touchstart', () => { $tip && ($tip.style.display = 'none'); }, { passive: true });
 
