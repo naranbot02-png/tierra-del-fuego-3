@@ -129,6 +129,7 @@ const touch = {
 
 function setupPad(padEl, stickEl, onMove){
   if (!padEl) return;
+  const hasPointer = ('PointerEvent' in window);
   let pid = null;
   let touchActive = false;
   let touchId = null;
@@ -158,26 +159,29 @@ function setupPad(padEl, stickEl, onMove){
   };
 
   // Pointer Events (Android/modern browsers)
-  padEl.addEventListener('pointerdown', (e) => {
-    e.preventDefault();
-    pid = e.pointerId;
-    padEl.setPointerCapture?.(pid);
-    refreshCenter();
-    setStick(e.clientX - center.x, e.clientY - center.y);
-  });
-  padEl.addEventListener('pointermove', (e) => {
-    if (pid !== e.pointerId) return;
-    e.preventDefault();
-    setStick(e.clientX - center.x, e.clientY - center.y);
-  });
-  padEl.addEventListener('pointerup', (e) => {
-    if (pid !== e.pointerId) return;
-    e.preventDefault();
-    reset();
-  });
-  padEl.addEventListener('pointercancel', () => reset());
+  if (hasPointer) {
+    padEl.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      pid = e.pointerId;
+      padEl.setPointerCapture?.(pid);
+      refreshCenter();
+      setStick(e.clientX - center.x, e.clientY - center.y);
+    });
+    padEl.addEventListener('pointermove', (e) => {
+      if (pid !== e.pointerId) return;
+      e.preventDefault();
+      setStick(e.clientX - center.x, e.clientY - center.y);
+    });
+    padEl.addEventListener('pointerup', (e) => {
+      if (pid !== e.pointerId) return;
+      e.preventDefault();
+      reset();
+    });
+    padEl.addEventListener('pointercancel', () => reset());
+    return;
+  }
 
-  // Touch fallback (Telegram/iOS webviews can be picky)
+  // Touch fallback (legacy/edge webviews)
   const findTouchById = (list, id) => {
     for (let i = 0; i < list.length; i++) {
       if (list[i].identifier === id) return list[i];
@@ -226,26 +230,32 @@ setupPad($movePad, $moveStick, (x,y) => { touch.moveX = x; touch.moveY = y; });
 setupPad($lookPad, $lookStick, (x,y) => { touch.lookX = x; touch.lookY = y; });
 
 if ($btnFire) {
+  const hasPointer = ('PointerEvent' in window);
   const down = (e) => { e.preventDefault(); state.fire = true; };
   const up = (e) => { e.preventDefault(); state.fire = false; };
-  $btnFire.addEventListener('pointerdown', down);
-  addEventListener('pointerup', up);
-  addEventListener('pointercancel', up);
-  // touch fallback
-  $btnFire.addEventListener('touchstart', down, { passive: false });
-  $btnFire.addEventListener('touchend', up, { passive: false });
-  $btnFire.addEventListener('touchcancel', up, { passive: false });
+  if (hasPointer) {
+    $btnFire.addEventListener('pointerdown', down);
+    addEventListener('pointerup', up);
+    addEventListener('pointercancel', up);
+  } else {
+    $btnFire.addEventListener('touchstart', down, { passive: false });
+    $btnFire.addEventListener('touchend', up, { passive: false });
+    $btnFire.addEventListener('touchcancel', up, { passive: false });
+  }
 }
 if ($btnJump) {
+  const hasPointer = ('PointerEvent' in window);
   const down = (e) => { e.preventDefault(); touch.jump = true; };
   const up = (e) => { e.preventDefault(); touch.jump = false; };
-  $btnJump.addEventListener('pointerdown', down);
-  addEventListener('pointerup', up);
-  addEventListener('pointercancel', up);
-  // touch fallback
-  $btnJump.addEventListener('touchstart', down, { passive: false });
-  $btnJump.addEventListener('touchend', up, { passive: false });
-  $btnJump.addEventListener('touchcancel', up, { passive: false });
+  if (hasPointer) {
+    $btnJump.addEventListener('pointerdown', down);
+    addEventListener('pointerup', up);
+    addEventListener('pointercancel', up);
+  } else {
+    $btnJump.addEventListener('touchstart', down, { passive: false });
+    $btnJump.addEventListener('touchend', up, { passive: false });
+    $btnJump.addEventListener('touchcancel', up, { passive: false });
+  }
 }
 
 // Pointer lock on desktop
