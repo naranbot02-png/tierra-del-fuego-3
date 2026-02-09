@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import * as THREE from 'https://unpkg.com/three@0.182.0/build/three.module.js';
 
 const $hp = document.getElementById('hp');
 const $ammo = document.getElementById('ammo');
