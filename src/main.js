@@ -129,7 +129,7 @@ const touch = {
 
 function setupPad(padEl, stickEl, onMove){
   if (!padEl) return;
-  const hasPointer = ('PointerEvent' in window);
+  const hasPointer = ('PointerEvent' in window) && !isTouch;
   let pid = null;
   let touchActive = false;
   let touchId = null;
@@ -230,7 +230,7 @@ setupPad($movePad, $moveStick, (x,y) => { touch.moveX = x; touch.moveY = y; });
 setupPad($lookPad, $lookStick, (x,y) => { touch.lookX = x; touch.lookY = y; });
 
 if ($btnFire) {
-  const hasPointer = ('PointerEvent' in window);
+  const hasPointer = ('PointerEvent' in window) && !isTouch;
   const down = (e) => { e.preventDefault(); state.fire = true; };
   const up = (e) => { e.preventDefault(); state.fire = false; };
   if (hasPointer) {
@@ -244,7 +244,7 @@ if ($btnFire) {
   }
 }
 if ($btnJump) {
-  const hasPointer = ('PointerEvent' in window);
+  const hasPointer = ('PointerEvent' in window) && !isTouch;
   const down = (e) => { e.preventDefault(); touch.jump = true; };
   const up = (e) => { e.preventDefault(); touch.jump = false; };
   if (hasPointer) {
