@@ -80,6 +80,18 @@
       body.layout-compact #btnFire { right: 10px; bottom: 162px; width: 84px; height: 84px; }
       body.layout-compact #btnJump { right: 18px; bottom: 252px; width: 64px; height: 64px; }
 
+      /* Left-hand mode: mirror thumb zones and action buttons */
+      body.layout-lefty #movePad { left: auto; right: 18px; }
+      body.layout-lefty #lookPad { right: auto; left: 18px; }
+      body.layout-lefty #btnFire { right: auto; left: 26px; }
+      body.layout-lefty #btnJump { right: auto; left: 34px; }
+      body.layout-lefty #btnRestart { left: auto; right: 14px; }
+
+      body.layout-lefty.layout-compact #movePad { left: auto; right: 8px; }
+      body.layout-lefty.layout-compact #lookPad { right: auto; left: 8px; }
+      body.layout-lefty.layout-compact #btnFire { right: auto; left: 10px; }
+      body.layout-lefty.layout-compact #btnJump { right: auto; left: 18px; }
+
       @media (pointer: coarse) {
         #touch { display: block; }
         #tip { display: none !important; }
@@ -94,9 +106,12 @@
       <div class="k" style="margin-top:6px"><span id="missionObjective">Derribá los 3 drones de patrulla</span> · <span id="missionTimer">Tiempo: 75s</span></div>
       <div class="k" style="margin-top:6px">
         Desktop: click to lock pointer · Move WASD · Jump Space · Shoot Click · Restart R
-        <br/>Mobile: left pad move · right pad look · FIRE / J · ↻ · alerta crítica visual/háptica
+        <br/>Mobile: dual-stick (mano configurable) · FIRE / J · ↻ · alerta crítica visual/háptica
       </div>
-      <button id="btnLayout" type="button" style="margin-top:8px;border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.35);color:#fff;border-radius:999px;padding:4px 10px;font-size:12px;">Layout: Cómodo</button>
+      <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
+        <button id="btnLayout" type="button" style="border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.35);color:#fff;border-radius:999px;padding:4px 10px;font-size:12px;">Layout: Cómodo</button>
+        <button id="btnHand" type="button" style="border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.35);color:#fff;border-radius:999px;padding:4px 10px;font-size:12px;">Mano: Derecha</button>
+      </div>
     </div>
 
     <div id="tip">Tierra del Fuego 3 — Click to start (desktop) / Tap to play (mobile)</div>

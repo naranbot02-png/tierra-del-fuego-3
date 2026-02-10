@@ -15,6 +15,7 @@ const $lookStick = document.getElementById('lookStick');
 const $btnFire = document.getElementById('btnFire');
 const $btnJump = document.getElementById('btnJump');
 const $btnLayout = document.getElementById('btnLayout');
+const $btnHand = document.getElementById('btnHand');
 const $btnRestart = document.getElementById('btnRestart');
 
 const isTouch = matchMedia('(pointer: coarse)').matches;
@@ -228,6 +229,26 @@ function initLayoutControl() {
       e.preventDefault();
       const next = document.body.classList.contains('layout-compact') ? 'comfortable' : 'compact';
       applyLayout(next);
+    });
+  }
+}
+
+function applyHandMode(mode) {
+  const lefty = mode === 'left';
+  document.body.classList.toggle('layout-lefty', lefty);
+  if ($btnHand) $btnHand.textContent = `Mano: ${lefty ? 'Izquierda' : 'Derecha'}`;
+  try { localStorage.setItem('tdf3_hand', lefty ? 'left' : 'right'); } catch {}
+}
+
+function initHandControl() {
+  let mode = 'right';
+  try { mode = localStorage.getItem('tdf3_hand') || 'right'; } catch {}
+  applyHandMode(mode);
+  if ($btnHand) {
+    $btnHand.addEventListener('click', (e) => {
+      e.preventDefault();
+      const next = document.body.classList.contains('layout-lefty') ? 'right' : 'left';
+      applyHandMode(next);
     });
   }
 }
@@ -526,6 +547,7 @@ function showStory(){
 }
 showStory();
 initLayoutControl();
+initHandControl();
 addEventListener('click', () => { if (isTouch) { $tip && ($tip.style.display = 'none'); } });
 addEventListener('touchstart', () => { $tip && ($tip.style.display = 'none'); ensureAudio(); }, { passive: true });
 
