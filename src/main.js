@@ -16,6 +16,7 @@ const $btnFire = document.getElementById('btnFire');
 const $btnJump = document.getElementById('btnJump');
 const $btnLayout = document.getElementById('btnLayout');
 const $btnHand = document.getElementById('btnHand');
+const $btnLook = document.getElementById('btnLook');
 const $btnRestart = document.getElementById('btnRestart');
 
 const isTouch = matchMedia('(pointer: coarse)').matches;
@@ -204,7 +205,13 @@ const touch = {
   jump: false,
 };
 
-const MOBILE_LOOK_SENS = 1.65;
+const LOOK_PRESETS = [
+  { id: 'precise', label: 'Precisa', sens: 1.2 },
+  { id: 'normal', label: 'Normal', sens: 1.65 },
+  { id: 'fast', label: 'Rápida', sens: 2.05 },
+];
+let mobileLookPreset = 'normal';
+let mobileLookSens = 1.65;
 const MOBILE_LOOK_DEADZONE = 0.18;
 
 function applyDeadzone(v, dz) {
@@ -249,6 +256,28 @@ function initHandControl() {
       e.preventDefault();
       const next = document.body.classList.contains('layout-lefty') ? 'right' : 'left';
       applyHandMode(next);
+    });
+  }
+}
+
+function applyLookPreset(presetId) {
+  const preset = LOOK_PRESETS.find((p) => p.id === presetId) || LOOK_PRESETS[1];
+  mobileLookPreset = preset.id;
+  mobileLookSens = preset.sens;
+  if ($btnLook) $btnLook.textContent = `Mira: ${preset.label}`;
+  try { localStorage.setItem('tdf3_look', preset.id); } catch {}
+}
+
+function initLookControl() {
+  let preset = 'normal';
+  try { preset = localStorage.getItem('tdf3_look') || 'normal'; } catch {}
+  applyLookPreset(preset);
+  if ($btnLook) {
+    $btnLook.addEventListener('click', (e) => {
+      e.preventDefault();
+      const currentIdx = LOOK_PRESETS.findIndex((p) => p.id === mobileLookPreset);
+      const nextIdx = (currentIdx + 1) % LOOK_PRESETS.length;
+      applyLookPreset(LOOK_PRESETS[nextIdx].id);
     });
   }
 }
@@ -548,6 +577,7 @@ function showStory(){
 showStory();
 initLayoutControl();
 initHandControl();
+initLookControl();
 addEventListener('click', () => { if (isTouch) { $tip && ($tip.style.display = 'none'); } });
 addEventListener('touchstart', () => { $tip && ($tip.style.display = 'none'); ensureAudio(); }, { passive: true });
 
@@ -680,8 +710,8 @@ function updateMission(dt){
 
 function updatePlayer(dt){
   if (isTouch) {
-    state.yaw -= touch.lookX * dt * MOBILE_LOOK_SENS;
-    state.pitch -= touch.lookY * dt * MOBILE_LOOK_SENS;
+    state.yaw -= touch.lookX * dt * mobileLookSens;
+    state.pitch -= touch.lookY * dt * mobileLookSens;
     state.pitch = Math.max(-1.25, Math.min(1.0, state.pitch));
   }
 

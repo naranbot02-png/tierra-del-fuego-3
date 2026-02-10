@@ -36,7 +36,7 @@ Objetivo: cerrar Sprint 1 con verificación explícita en mobile webview + naveg
 
 ## Hallazgos / huecos detectados
 
-1. Falta exponer sensibilidad de cámara mobile como ajuste rápido (solo estaba fija en código).
+1. ~~Falta exponer sensibilidad de cámara mobile como ajuste rápido~~ ✅ Resuelto con preset de mira (`Precisa / Normal / Rápida`) persistido en `localStorage`.
 
 ## Cierre Sprint 1
 
