@@ -38,7 +38,14 @@ Objetivo: cerrar Sprint 1 con verificación explícita en mobile webview + naveg
 
 1. ~~Falta exponer sensibilidad de cámara mobile como ajuste rápido~~ ✅ Resuelto con preset de mira (`Precisa / Normal / Rápida`) persistido en `localStorage`.
 
+## Estado actual (esta sesión)
+
+- [x] Build local: `npm run build` OK.
+- [x] Gap detectado de Sprint 1 (ajuste rápido de sensibilidad mobile) resuelto.
+- [ ] Validación en dispositivo real (webview Telegram).
+- [ ] Validación en navegador móvil externo (Chrome/Safari).
+- [ ] Deploy Pages + smoke test con cache-bust (`?v=`).
+
 ## Cierre Sprint 1
 
-Estado: **Pendiente de validación final en dispositivo real** (webview + navegador externo).  
-Este archivo define el protocolo y los checks para el cierre formal.
+Estado: **En cierre técnico, pendiente de validación final en dispositivo real** (webview + navegador externo) y deploy Pages.
