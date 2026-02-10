@@ -119,6 +119,12 @@ const mission = {
   prepLeft: 2.8,
 };
 
+const feedbackFlags = {
+  warned30: false,
+  warned15: false,
+  warnedLowHp: false,
+};
+
 {
   const toX = 0 - state.pos.x;
   const toZ = 24 - state.pos.z;
@@ -470,6 +476,7 @@ function updateEnemies(dt){
       state.hp = Math.max(0, state.hp - 8);
       e.hitCd = 0.8;
       sfxDamage();
+      if (isTouch && navigator.vibrate) navigator.vibrate(12);
     }
   }
 }
@@ -540,6 +547,9 @@ function resetMission(manual = false) {
   mission.phase = 'prep';
   mission.result = null;
   mission.prepLeft = mission.prepDuration;
+  feedbackFlags.warned30 = false;
+  feedbackFlags.warned15 = false;
+  feedbackFlags.warnedLowHp = false;
 
   state.hp = 100;
   state.velY = 0;
@@ -547,6 +557,8 @@ function resetMission(manual = false) {
   state.pos.copy(SPAWN_POS);
   touch.jump = false;
   state.fire = false;
+
+  if ($missionFeed) $missionFeed.classList.remove('show', 'feed-warn', 'feed-danger', 'feed-good');
 
   resetEnemies();
   if (manual) sfxStart();
@@ -574,6 +586,22 @@ function updateMission(dt){
     }
   } else if (mission.phase === 'playing') {
     mission.timeLeft = Math.max(0, mission.timeLeft - dt);
+
+    if (!feedbackFlags.warned30 && mission.timeLeft <= 30) {
+      feedbackFlags.warned30 = true;
+      beep({ freq: 520, duration: 0.06, type: 'triangle', gain: 0.026 });
+    }
+    if (!feedbackFlags.warned15 && mission.timeLeft <= 15) {
+      feedbackFlags.warned15 = true;
+      beep({ freq: 360, duration: 0.08, type: 'sawtooth', gain: 0.03 });
+      setTimeout(() => beep({ freq: 280, duration: 0.1, type: 'sawtooth', gain: 0.028 }), 90);
+    }
+    if (!feedbackFlags.warnedLowHp && state.hp <= 25) {
+      feedbackFlags.warnedLowHp = true;
+      beep({ freq: 200, duration: 0.08, type: 'square', gain: 0.03 });
+      if (isTouch && navigator.vibrate) navigator.vibrate([20, 60, 20]);
+    }
+
     if (mission.kills >= mission.targetKills) {
       mission.phase = 'result';
       mission.result = 'win';
@@ -615,9 +643,15 @@ function updateMission(dt){
     if (mission.phase === 'prep') $missionTimer.textContent = `Inicio en: ${Math.ceil(mission.prepLeft)}s`;
     else if (mission.phase === 'playing') $missionTimer.textContent = `Tiempo: ${Math.ceil(mission.timeLeft)}s`;
     else $missionTimer.textContent = 'Reiniciar: tecla R / botón ↻';
+
+    const criticalTime = mission.phase === 'playing' && mission.timeLeft <= 15;
+    $missionTimer.classList.toggle('timer-critical', criticalTime);
   }
 
-  if ($hp) $hp.textContent = String(state.hp);
+  if ($hp) {
+    $hp.textContent = String(state.hp);
+    $hp.classList.toggle('hp-critical', state.hp <= 25);
+  }
   setHudPhaseVisuals();
 }
 

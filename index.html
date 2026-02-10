@@ -20,7 +20,10 @@
       #missionStatus.mission-live { color:#86efac; text-shadow:0 0 12px rgba(22,163,74,.28); animation: pulseLive 1.2s ease-in-out infinite; }
       #missionStatus.mission-win { color:#67e8f9; text-shadow:0 0 12px rgba(14,165,233,.45); }
       #missionStatus.mission-lose { color:#fca5a5; text-shadow:0 0 12px rgba(239,68,68,.45); }
+      #missionTimer.timer-critical { color:#fca5a5; text-shadow:0 0 10px rgba(239,68,68,.45); animation: pulseDanger .75s ease-in-out infinite; }
+      #hp.hp-critical { color:#fb7185; font-weight:900; text-shadow:0 0 10px rgba(244,63,94,.45); }
       @keyframes pulseLive { 0%,100%{opacity:1} 50%{opacity:.72} }
+      @keyframes pulseDanger { 0%,100%{opacity:1} 50%{opacity:.52} }
       #tip {
         position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);
         padding: 10px 14px; border-radius: 10px;
@@ -91,7 +94,7 @@
       <div class="k" style="margin-top:6px"><span id="missionObjective">Derribá los 3 drones de patrulla</span> · <span id="missionTimer">Tiempo: 75s</span></div>
       <div class="k" style="margin-top:6px">
         Desktop: click to lock pointer · Move WASD · Jump Space · Shoot Click · Restart R
-        <br/>Mobile: left pad move · right pad look · FIRE / J · ↻
+        <br/>Mobile: left pad move · right pad look · FIRE / J · ↻ · alerta crítica visual/háptica
       </div>
       <button id="btnLayout" type="button" style="margin-top:8px;border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.35);color:#fff;border-radius:999px;padding:4px 10px;font-size:12px;">Layout: Cómodo</button>
     </div>
