@@ -80,6 +80,21 @@ const beaconLight = new THREE.PointLight(0x67e8f9, 2.5, 45, 2);
 beaconLight.position.copy(beacon.position);
 scene.add(beaconLight);
 
+const EXTRACTION_POINT = new THREE.Vector2(beacon.position.x, beacon.position.z);
+const extractionZone = new THREE.Mesh(
+  new THREE.RingGeometry(2.1, 2.9, 40),
+  new THREE.MeshBasicMaterial({
+    color: 0x67e8f9,
+    transparent: true,
+    opacity: 0,
+    side: THREE.DoubleSide,
+  })
+);
+extractionZone.rotation.x = -Math.PI / 2;
+extractionZone.position.set(beacon.position.x, 0.05, beacon.position.z);
+extractionZone.visible = false;
+scene.add(extractionZone);
+
 for (let i=0;i<12;i++){
   const x = (Math.random()*2-1) * 60;
   const z = (Math.random()*2-1) * 60;
@@ -120,6 +135,11 @@ const mission = {
   result: null, // win | lose | null
   prepDuration: 2.8,
   prepLeft: 2.8,
+  extractionRadius: 3.2,
+  extractionDuration: 2.6,
+  extractionProgress: 0,
+  extractionReady: false,
+  extractionInside: false,
 };
 
 const feedbackFlags = {
@@ -583,7 +603,7 @@ function doShoot(now){
 
 const story = [
   'Río Grande, TDF. La tormenta cortó la comunicación con la base.',
-  'Eliminá drones hostiles. La amenaza sube cuanto más tarda la misión.',
+  'Eliminá drones hostiles y extraé en el faro. La amenaza sube con el tiempo.',
 ];
 let storyIdx = 0;
 function showStory(){
@@ -617,6 +637,9 @@ function resetMission(manual = false) {
   mission.phase = 'prep';
   mission.result = null;
   mission.prepLeft = mission.prepDuration;
+  mission.extractionProgress = 0;
+  mission.extractionReady = false;
+  mission.extractionInside = false;
   feedbackFlags.warned30 = false;
   feedbackFlags.warned15 = false;
   feedbackFlags.warnedLowHp = false;
@@ -633,6 +656,8 @@ function resetMission(manual = false) {
   if ($missionFeed) $missionFeed.classList.remove('show', 'feed-warn', 'feed-danger', 'feed-good');
 
   resetEnemies();
+  extractionZone.visible = false;
+  extractionZone.material.opacity = 0;
   if (manual) sfxStart();
 
   if ($tip) {
@@ -696,15 +721,49 @@ function updateMission(dt){
       if (isTouch && navigator.vibrate) navigator.vibrate([20, 60, 20]);
     }
 
-    if (mission.kills >= mission.targetKills) {
-      mission.phase = 'result';
-      mission.result = 'win';
-      sfxWin();
+    if (!mission.extractionReady && mission.kills >= mission.targetKills) {
+      mission.extractionReady = true;
+      mission.extractionProgress = 0;
+      mission.extractionInside = false;
+      beep({ freq: 660, duration: 0.06, type: 'triangle', gain: 0.028 });
+      setTimeout(() => beep({ freq: 920, duration: 0.07, type: 'triangle', gain: 0.028 }), 65);
+      if (isTouch && navigator.vibrate) navigator.vibrate(18);
       if ($tip) {
-        $tip.textContent = 'Misión cumplida. R para reiniciar.';
+        $tip.textContent = 'Objetivo actualizado: volvé al faro para extraer.';
         $tip.style.display = 'block';
+        if (isTouch) setTimeout(() => { if (mission.phase === 'playing' && mission.extractionReady) $tip.style.display = 'none'; }, 1100);
       }
-    } else if (mission.timeLeft <= 0 || state.hp <= 0) {
+    }
+
+    if (mission.extractionReady) {
+      const dx = state.pos.x - EXTRACTION_POINT.x;
+      const dz = state.pos.z - EXTRACTION_POINT.y;
+      const inside = Math.hypot(dx, dz) <= mission.extractionRadius;
+
+      if (inside) {
+        mission.extractionProgress = Math.min(mission.extractionDuration, mission.extractionProgress + dt);
+        if (!mission.extractionInside) {
+          mission.extractionInside = true;
+          beep({ freq: 740, duration: 0.05, type: 'triangle', gain: 0.024 });
+          if (isTouch && navigator.vibrate) navigator.vibrate(12);
+        }
+      } else {
+        mission.extractionInside = false;
+        mission.extractionProgress = Math.max(0, mission.extractionProgress - dt * 0.72);
+      }
+
+      if (mission.extractionProgress >= mission.extractionDuration) {
+        mission.phase = 'result';
+        mission.result = 'win';
+        sfxWin();
+        if ($tip) {
+          $tip.textContent = 'Extracción confirmada. R para reiniciar.';
+          $tip.style.display = 'block';
+        }
+      }
+    }
+
+    if ((mission.timeLeft <= 0 || state.hp <= 0) && mission.phase === 'playing') {
       mission.phase = 'result';
       mission.result = 'lose';
       sfxLose();
@@ -715,15 +774,27 @@ function updateMission(dt){
     }
   }
 
+  const extractionPct = Math.round((mission.extractionProgress / mission.extractionDuration) * 100);
+
   if ($missionStatus) {
-    if (mission.phase === 'prep') $missionStatus.textContent = `Preparación ${Math.ceil(mission.prepLeft)}s`;
-    else if (mission.phase === 'playing') $missionStatus.textContent = 'En curso';
-    else $missionStatus.textContent = mission.result === 'win' ? 'Completada' : 'Fallida';
+    if (mission.phase === 'prep') {
+      $missionStatus.textContent = `Preparación ${Math.ceil(mission.prepLeft)}s`;
+    } else if (mission.phase === 'playing') {
+      $missionStatus.textContent = mission.extractionReady
+        ? (mission.extractionInside ? 'Extrayendo' : 'Evacuación')
+        : 'En curso';
+    } else {
+      $missionStatus.textContent = mission.result === 'win' ? 'Completada' : 'Fallida';
+    }
   }
 
   if ($missionObjective) {
     if (mission.phase === 'prep') {
-      $missionObjective.textContent = `Objetivo: derribar ${mission.targetKills} drones`;
+      $missionObjective.textContent = `Objetivo: derribar ${mission.targetKills} drones y extraer en el faro`;
+    } else if (mission.phase === 'playing' && mission.extractionReady) {
+      $missionObjective.textContent = mission.extractionInside
+        ? `Sostené posición en el faro: ${extractionPct}%`
+        : `Volvé al faro para extraer: ${extractionPct}%`;
     } else if (mission.phase === 'playing') {
       $missionObjective.textContent = `Drones derribados: ${mission.kills}/${mission.targetKills} · Amenaza ${getThreatLevel().label}`;
     } else {
@@ -734,9 +805,15 @@ function updateMission(dt){
   }
 
   if ($missionTimer) {
-    if (mission.phase === 'prep') $missionTimer.textContent = `Inicio en: ${Math.ceil(mission.prepLeft)}s`;
-    else if (mission.phase === 'playing') $missionTimer.textContent = `Tiempo: ${Math.ceil(mission.timeLeft)}s`;
-    else $missionTimer.textContent = 'Reiniciar: tecla R / botón ↻';
+    if (mission.phase === 'prep') {
+      $missionTimer.textContent = `Inicio en: ${Math.ceil(mission.prepLeft)}s`;
+    } else if (mission.phase === 'playing') {
+      $missionTimer.textContent = mission.extractionReady
+        ? `Tiempo: ${Math.ceil(mission.timeLeft)}s · Amenaza ${getThreatLevel().label}`
+        : `Tiempo: ${Math.ceil(mission.timeLeft)}s`;
+    } else {
+      $missionTimer.textContent = 'Reiniciar: tecla R / botón ↻';
+    }
 
     const criticalTime = mission.phase === 'playing' && mission.timeLeft <= 15;
     $missionTimer.classList.toggle('timer-critical', criticalTime);
@@ -749,6 +826,26 @@ function updateMission(dt){
   setHudPhaseVisuals();
 }
 
+function updateBeaconState(now) {
+  const pulse = 0.5 + Math.sin(now * 0.0075) * 0.5;
+  const baseGlow = 1.35 + pulse * 0.2;
+
+  if (mission.phase === 'playing' && mission.extractionReady) {
+    const p = THREE.MathUtils.clamp(mission.extractionProgress / mission.extractionDuration, 0, 1);
+    extractionZone.visible = true;
+    extractionZone.material.opacity = 0.22 + pulse * 0.22 + p * 0.2;
+    extractionZone.scale.setScalar(1 + (1 - p) * 0.06);
+    beacon.material.emissiveIntensity = baseGlow + 0.25 + p * 0.75;
+    beaconLight.intensity = 2.8 + pulse * 0.9 + p * 1.1;
+    return;
+  }
+
+  extractionZone.visible = false;
+  extractionZone.material.opacity = 0;
+  extractionZone.scale.setScalar(1);
+  beacon.material.emissiveIntensity = baseGlow;
+  beaconLight.intensity = 2.4 + pulse * 0.35;
+}
 function updatePlayer(dt){
   if (isTouch) {
     state.yaw -= touch.lookX * dt * mobileLookSens;
@@ -812,6 +909,7 @@ function tick(){
   updatePlayer(dt);
   updateEnemies(dt);
   updateMission(dt);
+  updateBeaconState(now);
 
   const canShoot = mission.phase === 'playing';
   const wantShoot = canShoot && ((!isTouch && pointerLocked && (keys.has('KeyF'))) || state.fire || (!isTouch && pointerLocked && mouseDown));

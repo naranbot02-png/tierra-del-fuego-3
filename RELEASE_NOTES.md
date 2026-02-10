@@ -9,6 +9,10 @@
   - Drones aumentan agresividad por nivel de amenaza (I → II → III).
   - HUD muestra nivel de amenaza durante la misión.
   - Alertas visuales/sonoras al escalar la amenaza.
+- Sprint 2 (loop misión): nueva fase de extracción tras derribar drones.
+  - Al completar bajas, el objetivo cambia a volver al faro para evacuar.
+  - Extracción por permanencia en zona (progreso acumulado, con pérdida parcial al salir).
+  - Señal visual del faro/aro y feedback háptico breve al entrar en zona en mobile.
 
 ## Qué probar (rápido)
 
