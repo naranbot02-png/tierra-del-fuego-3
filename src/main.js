@@ -128,6 +128,20 @@ const feedbackFlags = {
   warnedLowHp: false,
 };
 
+const THREAT_LEVELS = [
+  { id: 1, label: 'I', minTimeRatio: 0.66, moveMul: 1.0, damage: 8, hitCooldown: 0.8 },
+  { id: 2, label: 'II', minTimeRatio: 0.33, moveMul: 1.22, damage: 10, hitCooldown: 0.68 },
+  { id: 3, label: 'III', minTimeRatio: 0.0, moveMul: 1.4, damage: 12, hitCooldown: 0.56 },
+];
+
+function getThreatLevel() {
+  if (mission.phase !== 'playing') return THREAT_LEVELS[0];
+  const ratio = mission.timeLeft / mission.timeLimit;
+  if (ratio > THREAT_LEVELS[0].minTimeRatio) return THREAT_LEVELS[0];
+  if (ratio > THREAT_LEVELS[1].minTimeRatio) return THREAT_LEVELS[1];
+  return THREAT_LEVELS[2];
+}
+
 {
   const toX = 0 - state.pos.x;
   const toZ = 24 - state.pos.z;
@@ -514,9 +528,10 @@ function resetEnemies() {
 }
 
 function updateEnemies(dt){
+  const threat = getThreatLevel();
   for (const e of enemies){
     if (e.hp <= 0) continue;
-    e.t += dt;
+    e.t += dt * threat.moveMul;
     e.hitCd = Math.max(0, e.hitCd - dt);
     e.mesh.position.x = e.base.x + Math.sin(e.t*0.8)*1.3;
     e.mesh.position.z = e.base.z + Math.cos(e.t*0.7)*1.3;
@@ -524,8 +539,8 @@ function updateEnemies(dt){
 
     const dist = e.mesh.position.distanceTo(state.pos);
     if (dist < 1.9 && e.hitCd <= 0 && mission.phase === 'playing') {
-      state.hp = Math.max(0, state.hp - 8);
-      e.hitCd = 0.8;
+      state.hp = Math.max(0, state.hp - threat.damage);
+      e.hitCd = threat.hitCooldown;
       sfxDamage();
       if (isTouch && navigator.vibrate) navigator.vibrate(12);
     }
