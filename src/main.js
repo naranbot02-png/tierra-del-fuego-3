@@ -6,6 +6,7 @@ const $tip = document.getElementById('tip');
 const $missionStatus = document.getElementById('missionStatus');
 const $missionObjective = document.getElementById('missionObjective');
 const $missionTimer = document.getElementById('missionTimer');
+const $missionFeed = document.getElementById('missionFeed');
 
 const $movePad = document.getElementById('movePad');
 const $moveStick = document.getElementById('moveStick');
