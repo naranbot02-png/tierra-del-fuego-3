@@ -126,6 +126,8 @@ const feedbackFlags = {
   warned30: false,
   warned15: false,
   warnedLowHp: false,
+  warnedThreat2: false,
+  warnedThreat3: false,
 };
 
 const THREAT_LEVELS = [
@@ -581,7 +583,7 @@ function doShoot(now){
 
 const story = [
   'Río Grande, TDF. La tormenta cortó la comunicación con la base.',
-  'Eliminá drones hostiles cuando inicie la ventana táctica.',
+  'Eliminá drones hostiles. La amenaza sube cuanto más tarda la misión.',
 ];
 let storyIdx = 0;
 function showStory(){
@@ -618,6 +620,8 @@ function resetMission(manual = false) {
   feedbackFlags.warned30 = false;
   feedbackFlags.warned15 = false;
   feedbackFlags.warnedLowHp = false;
+  feedbackFlags.warnedThreat2 = false;
+  feedbackFlags.warnedThreat3 = false;
 
   state.hp = 100;
   state.velY = 0;
@@ -654,6 +658,28 @@ function updateMission(dt){
     }
   } else if (mission.phase === 'playing') {
     mission.timeLeft = Math.max(0, mission.timeLeft - dt);
+    const threat = getThreatLevel();
+
+    if (!feedbackFlags.warnedThreat2 && threat.id >= 2) {
+      feedbackFlags.warnedThreat2 = true;
+      beep({ freq: 560, duration: 0.06, type: 'triangle', gain: 0.024 });
+      if ($tip) {
+        $tip.textContent = 'Amenaza II: drones más agresivos.';
+        $tip.style.display = 'block';
+        if (isTouch) setTimeout(() => { if (mission.phase === 'playing') $tip.style.display = 'none'; }, 850);
+      }
+    }
+    if (!feedbackFlags.warnedThreat3 && threat.id >= 3) {
+      feedbackFlags.warnedThreat3 = true;
+      beep({ freq: 300, duration: 0.08, type: 'sawtooth', gain: 0.03 });
+      setTimeout(() => beep({ freq: 250, duration: 0.1, type: 'sawtooth', gain: 0.028 }), 80);
+      if (isTouch && navigator.vibrate) navigator.vibrate([16, 44, 16]);
+      if ($tip) {
+        $tip.textContent = 'Amenaza III: máxima presión.';
+        $tip.style.display = 'block';
+        if (isTouch) setTimeout(() => { if (mission.phase === 'playing') $tip.style.display = 'none'; }, 1000);
+      }
+    }
 
     if (!feedbackFlags.warned30 && mission.timeLeft <= 30) {
       feedbackFlags.warned30 = true;
@@ -699,7 +725,7 @@ function updateMission(dt){
     if (mission.phase === 'prep') {
       $missionObjective.textContent = `Objetivo: derribar ${mission.targetKills} drones`;
     } else if (mission.phase === 'playing') {
-      $missionObjective.textContent = `Drones derribados: ${mission.kills}/${mission.targetKills}`;
+      $missionObjective.textContent = `Drones derribados: ${mission.kills}/${mission.targetKills} · Amenaza ${getThreatLevel().label}`;
     } else {
       $missionObjective.textContent = mission.result === 'win'
         ? 'Resultado: zona asegurada'
