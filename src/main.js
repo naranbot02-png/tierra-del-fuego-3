@@ -3,6 +3,9 @@ import * as THREE from 'https://unpkg.com/three@0.182.0/build/three.module.js';
 const $hp = document.getElementById('hp');
 const $ammo = document.getElementById('ammo');
 const $tip = document.getElementById('tip');
+const $missionStatus = document.getElementById('missionStatus');
+const $missionObjective = document.getElementById('missionObjective');
+const $missionTimer = document.getElementById('missionTimer');
 
 const $movePad = document.getElementById('movePad');
 const $moveStick = document.getElementById('moveStick');
@@ -108,6 +111,14 @@ const state = {
   pitch: 0.18,
   onGround: false,
   fire: false,
+};
+
+const mission = {
+  targetKills: 3,
+  kills: 0,
+  timeLimit: 75,
+  timeLeft: 75,
+  status: 'playing', // playing | win | lose
 };
 
 // Force initial heading towards landmark at (0,3,24)
@@ -365,21 +376,30 @@ function spawnEnemy(x,z){
   eye.position.set(0, 0.05, 0.42);
   body.add(eye);
   scene.add(body);
-  enemies.push({ mesh: body, hp: 3, base: new THREE.Vector3(x,1.4,z), t: Math.random()*10 });
+  enemies.push({ mesh: body, hp: 3, dead: false, base: new THREE.Vector3(x,1.4,z), t: Math.random()*10, hitCd: 0 });
 }
 spawnEnemy(4, -2);
 spawnEnemy(-6, -8);
 spawnEnemy(6, 8);
+mission.targetKills = enemies.length;
 
 function updateEnemies(dt){
   for (const e of enemies){
     if (e.hp <= 0) continue;
     e.t += dt;
+    e.hitCd = Math.max(0, e.hitCd - dt);
     // simple patrol in small circle
     e.mesh.position.x = e.base.x + Math.sin(e.t*0.8)*1.3;
     e.mesh.position.z = e.base.z + Math.cos(e.t*0.7)*1.3;
     // face player
     e.mesh.lookAt(state.pos.x, 1.4, state.pos.z);
+
+    // contact damage to force urgency in mission
+    const dist = e.mesh.position.distanceTo(state.pos);
+    if (dist < 1.9 && e.hitCd <= 0 && mission.status === 'playing') {
+      state.hp = Math.max(0, state.hp - 8);
+      e.hitCd = 0.8;
+    }
   }
 }
 
@@ -406,7 +426,9 @@ function doShoot(now){
       // hit flash
       enemy.mesh.material.emissiveIntensity = 1.1;
       setTimeout(() => { try{ enemy.mesh.material.emissiveIntensity = 0.35; } catch{} }, 60);
-      if (enemy.hp <= 0){
+      if (enemy.hp <= 0 && !enemy.dead){
+        enemy.dead = true;
+        mission.kills += 1;
         enemy.mesh.scale.setScalar(0.001);
       }
     }
@@ -432,6 +454,38 @@ addEventListener('touchstart', () => { $tip && ($tip.style.display = 'none'); },
 // Physics
 const GRAV = -18;
 const JUMP = 7.2;
+
+function updateMission(dt){
+  if (mission.status === 'playing') {
+    mission.timeLeft = Math.max(0, mission.timeLeft - dt);
+    if (mission.kills >= mission.targetKills) {
+      mission.status = 'win';
+      if ($tip) {
+        $tip.textContent = 'Misión cumplida: drones neutralizados. Zona asegurada.';
+        $tip.style.display = 'block';
+      }
+    } else if (mission.timeLeft <= 0 || state.hp <= 0) {
+      mission.status = 'lose';
+      if ($tip) {
+        $tip.textContent = 'Misión fallida: sin tiempo o sin energía vital. Reintentá.';
+        $tip.style.display = 'block';
+      }
+    }
+  }
+
+  if ($missionStatus) {
+    $missionStatus.textContent = mission.status === 'playing' ? 'En curso' : mission.status === 'win' ? 'Completada' : 'Fallida';
+  }
+  if ($missionObjective) {
+    $missionObjective.textContent = `Drones derribados: ${mission.kills}/${mission.targetKills}`;
+  }
+  if ($missionTimer) {
+    $missionTimer.textContent = `Tiempo: ${Math.ceil(mission.timeLeft)}s`;
+  }
+  if ($hp) {
+    $hp.textContent = String(state.hp);
+  }
+}
 
 function updatePlayer(dt){
   // apply touch look (mobile)
@@ -506,8 +560,9 @@ function tick(){
 
   updatePlayer(dt);
   updateEnemies(dt);
+  updateMission(dt);
 
-  const wantShoot = (!isTouch && pointerLocked && (keys.has('KeyF'))) || state.fire || (!isTouch && pointerLocked && (mouseDown));
+  const wantShoot = mission.status === 'playing' && ((!isTouch && pointerLocked && (keys.has('KeyF'))) || state.fire || (!isTouch && pointerLocked && (mouseDown)));
   if (wantShoot) doShoot(now);
 
   // Gunfeel feedback
