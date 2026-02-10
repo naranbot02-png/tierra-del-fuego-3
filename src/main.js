@@ -18,6 +18,9 @@ const $btnLayout = document.getElementById('btnLayout');
 const $btnHand = document.getElementById('btnHand');
 const $btnLook = document.getElementById('btnLook');
 const $btnRestart = document.getElementById('btnRestart');
+const $extractIndicator = document.getElementById('extractIndicator');
+const $extractArrow = document.getElementById('extractArrow');
+const $extractLabel = document.getElementById('extractLabel');
 
 const isTouch = matchMedia('(pointer: coarse)').matches;
 const MOBILE_MAX_DPR = 1.25; // perf guard for webviews/phones
@@ -162,6 +165,13 @@ function getThreatLevel() {
   if (ratio > THREAT_LEVELS[0].minTimeRatio) return THREAT_LEVELS[0];
   if (ratio > THREAT_LEVELS[1].minTimeRatio) return THREAT_LEVELS[1];
   return THREAT_LEVELS[2];
+}
+
+function wrapAngle(rad) {
+  let a = rad;
+  while (a > Math.PI) a -= Math.PI * 2;
+  while (a < -Math.PI) a += Math.PI * 2;
+  return a;
 }
 
 {
@@ -658,6 +668,12 @@ function resetMission(manual = false) {
   resetEnemies();
   extractionZone.visible = false;
   extractionZone.material.opacity = 0;
+  if ($extractIndicator) $extractIndicator.classList.remove('show', 'extract-locked');
+  if ($extractArrow) {
+    $extractArrow.textContent = '▲';
+    $extractArrow.style.transform = 'translateY(-1px) rotate(0deg)';
+  }
+  if ($extractLabel) $extractLabel.textContent = 'Faro';
   if (manual) sfxStart();
 
   if ($tip) {
@@ -846,6 +862,46 @@ function updateBeaconState(now) {
   beacon.material.emissiveIntensity = baseGlow;
   beaconLight.intensity = 2.4 + pulse * 0.35;
 }
+
+function updateExtractionIndicator() {
+  if (!$extractIndicator || !$extractArrow || !$extractLabel) return;
+
+  const active = mission.phase === 'playing' && mission.extractionReady;
+  $extractIndicator.classList.toggle('show', active);
+  if (!active) return;
+
+  const dx = EXTRACTION_POINT.x - state.pos.x;
+  const dz = EXTRACTION_POINT.y - state.pos.z;
+  const distance = Math.max(0, Math.round(Math.hypot(dx, dz)));
+
+  if (mission.extractionInside) {
+    const pct = Math.round((mission.extractionProgress / mission.extractionDuration) * 100);
+    $extractIndicator.classList.add('extract-locked');
+    $extractArrow.textContent = '✓';
+    $extractArrow.style.transform = 'translateY(-1px) rotate(0deg)';
+    $extractLabel.textContent = `En faro ${pct}%`;
+    return;
+  }
+
+  $extractIndicator.classList.remove('extract-locked');
+
+  const targetYaw = Math.atan2(dx, dz);
+  const yawDelta = wrapAngle(targetYaw - state.yaw);
+  const clampedDelta = THREE.MathUtils.clamp(yawDelta, -1.2, 1.2);
+  const rotationDeg = THREE.MathUtils.radToDeg(clampedDelta);
+
+  $extractArrow.textContent = '▲';
+  $extractArrow.style.transform = `translateY(-1px) rotate(${rotationDeg.toFixed(1)}deg)`;
+
+  if (Math.abs(yawDelta) < 0.16) {
+    $extractLabel.textContent = `Faro al frente · ${distance}m`;
+  } else if (yawDelta > 0) {
+    $extractLabel.textContent = `Faro a la derecha · ${distance}m`;
+  } else {
+    $extractLabel.textContent = `Faro a la izquierda · ${distance}m`;
+  }
+}
+
 function updatePlayer(dt){
   if (isTouch) {
     state.yaw -= touch.lookX * dt * mobileLookSens;
@@ -910,6 +966,7 @@ function tick(){
   updateEnemies(dt);
   updateMission(dt);
   updateBeaconState(now);
+  updateExtractionIndicator();
 
   const canShoot = mission.phase === 'playing';
   const wantShoot = canShoot && ((!isTouch && pointerLocked && (keys.has('KeyF'))) || state.fire || (!isTouch && pointerLocked && mouseDown));

@@ -32,6 +32,42 @@
         font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
         z-index: 15;
       }
+      #extractIndicator {
+        position: fixed;
+        left: 50%;
+        top: max(12px, env(safe-area-inset-top));
+        transform: translateX(-50%);
+        z-index: 18;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(103,232,249,.38);
+        background: rgba(2,6,23,.5);
+        color: #bae6fd;
+        text-shadow: 0 0 8px rgba(103,232,249,.35);
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+        font-size: 12px;
+        line-height: 1;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 120ms ease, border-color 120ms ease, color 120ms ease;
+        backdrop-filter: blur(5px);
+      }
+      #extractIndicator.show { opacity: 1; }
+      #extractIndicator.extract-locked {
+        color: #86efac;
+        border-color: rgba(34,197,94,.45);
+        text-shadow: 0 0 8px rgba(34,197,94,.35);
+      }
+      #extractArrow {
+        display: inline-block;
+        font-size: 13px;
+        transform-origin: 50% 55%;
+        transform: translateY(-1px) rotate(0deg);
+      }
+      #extractLabel { white-space: nowrap; }
 
       /* Touch controls */
       #touch {
@@ -95,6 +131,11 @@
       @media (pointer: coarse) {
         #touch { display: block; }
         #tip { display: none !important; }
+        #extractIndicator {
+          top: calc(env(safe-area-inset-top) + 54px);
+          font-size: 11px;
+          padding: 3px 8px;
+        }
       }
     </style>
   </head>
@@ -116,6 +157,10 @@
     </div>
 
     <div id="tip">Tierra del Fuego 3 — Click to start (desktop) / Tap to play (mobile)</div>
+    <div id="extractIndicator" aria-hidden="true">
+      <span id="extractArrow">▲</span>
+      <span id="extractLabel">Faro</span>
+    </div>
 
     <div id="touch" aria-hidden="true">
       <div id="movePad" class="pad"><div id="moveStick" class="stick"></div></div>
