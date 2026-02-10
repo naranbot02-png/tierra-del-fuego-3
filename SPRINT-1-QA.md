@@ -7,7 +7,7 @@ Objetivo: cerrar Sprint 1 con verificación explícita en mobile webview + naveg
 - [ ] Mover + mirar + disparar simultáneo sin drift en webview Telegram.
 - [ ] Controles no se superponen en pantallas chicas.
 - [ ] Feedback de disparo perceptible y consistente.
-- [ ] Build + deploy Pages OK.
+- [x] Build + deploy Pages OK. ✅ Run `21878895912` (2026-02-10).
 
 ## Matriz de prueba manual
 
@@ -44,7 +44,7 @@ Objetivo: cerrar Sprint 1 con verificación explícita en mobile webview + naveg
 - [x] Gap detectado de Sprint 1 (ajuste rápido de sensibilidad mobile) resuelto.
 - [ ] Validación en dispositivo real (webview Telegram).
 - [ ] Validación en navegador móvil externo (Chrome/Safari).
-- [ ] Deploy Pages + smoke test con cache-bust (`?v=`).
+- [x] Deploy Pages realizado + verificación de cache-bust (`?v=`) HTTP 200.
 
 ## Cierre Sprint 1
 
