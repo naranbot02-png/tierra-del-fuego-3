@@ -7,6 +7,9 @@ const $missionStatus = document.getElementById('missionStatus');
 const $missionObjective = document.getElementById('missionObjective');
 const $missionTimer = document.getElementById('missionTimer');
 const $missionFeed = document.getElementById('missionFeed');
+const $missionMini = document.getElementById('missionMini');
+const $missionMiniLabel = document.getElementById('missionMiniLabel');
+const $missionMiniFill = document.getElementById('missionMiniFill');
 
 const $movePad = document.getElementById('movePad');
 const $moveStick = document.getElementById('moveStick');
@@ -641,6 +644,42 @@ function setHudPhaseVisuals() {
   if (phase === 'result' && mission.result === 'lose') $missionStatus.classList.add('mission-lose');
 }
 
+function updateMissionMini() {
+  if (!$missionMini || !$missionMiniLabel || !$missionMiniFill) return;
+
+  let label = 'Objetivo';
+  let progress = 0;
+  let tone = 'neutral';
+
+  if (mission.phase === 'prep') {
+    label = `Inicio en ${Math.ceil(mission.prepLeft)}s`;
+    progress = 1 - (mission.prepLeft / mission.prepDuration);
+    tone = 'neutral';
+  } else if (mission.phase === 'playing' && !mission.extractionReady) {
+    label = `Drones ${mission.kills}/${mission.targetKills}`;
+    progress = mission.targetKills > 0 ? (mission.kills / mission.targetKills) : 0;
+    tone = 'combat';
+  } else if (mission.phase === 'playing' && mission.extractionReady) {
+    const extractionPct = Math.round((mission.extractionProgress / mission.extractionDuration) * 100);
+    label = mission.extractionInside ? `Extracción ${extractionPct}%` : `Faro ${extractionPct}%`;
+    progress = mission.extractionProgress / mission.extractionDuration;
+    tone = 'extract';
+  } else if (mission.result === 'win') {
+    label = 'Misión completada';
+    progress = 1;
+    tone = 'win';
+  } else {
+    label = 'Misión fallida';
+    progress = 0.04;
+    tone = 'danger';
+  }
+
+  const clampedProgress = THREE.MathUtils.clamp(progress, 0, 1);
+  $missionMini.dataset.tone = tone;
+  $missionMiniLabel.textContent = label;
+  $missionMiniFill.style.width = `${Math.round(clampedProgress * 100)}%`;
+}
+
 function resetMission(manual = false) {
   mission.kills = 0;
   mission.timeLeft = mission.timeLimit;
@@ -839,6 +878,7 @@ function updateMission(dt){
     $hp.textContent = String(state.hp);
     $hp.classList.toggle('hp-critical', state.hp <= 25);
   }
+  updateMissionMini();
   setHudPhaseVisuals();
 }
 

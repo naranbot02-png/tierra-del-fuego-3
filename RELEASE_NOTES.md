@@ -14,6 +14,7 @@
   - Extracción por permanencia en zona (progreso acumulado, con pérdida parcial al salir).
   - Señal visual del faro/aro y feedback háptico breve al entrar en zona en mobile.
   - Indicador direccional discreto al faro durante extracción (mobile-first, sin bloquear touch).
+  - Mini barra de objetivo (combat/extracción/resultado) para lectura rápida en pantallas chicas.
 
 ## Qué probar (rápido)
 

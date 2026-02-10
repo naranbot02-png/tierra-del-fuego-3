@@ -22,6 +22,37 @@
       #missionStatus.mission-lose { color:#fca5a5; text-shadow:0 0 12px rgba(239,68,68,.45); }
       #missionTimer.timer-critical { color:#fca5a5; text-shadow:0 0 10px rgba(239,68,68,.45); animation: pulseDanger .75s ease-in-out infinite; }
       #hp.hp-critical { color:#fb7185; font-weight:900; text-shadow:0 0 10px rgba(244,63,94,.45); }
+      #missionMini {
+        margin-top: 7px;
+        width: min(300px, 78vw);
+        padding: 6px 8px;
+        border-radius: 10px;
+        border: 1px solid rgba(255,255,255,.12);
+        background: rgba(2,6,23,.35);
+      }
+      #missionMiniLabel {
+        display: block;
+        font-size: 12px;
+        color: #cbd5e1;
+        margin-bottom: 4px;
+      }
+      #missionMiniBar {
+        height: 5px;
+        border-radius: 999px;
+        background: rgba(255,255,255,.13);
+        overflow: hidden;
+      }
+      #missionMiniFill {
+        width: 0%;
+        height: 100%;
+        border-radius: inherit;
+        background: #93c5fd;
+        transition: width 120ms linear, background-color 140ms ease;
+      }
+      #missionMini[data-tone="combat"] #missionMiniFill { background: #22d3ee; }
+      #missionMini[data-tone="extract"] #missionMiniFill { background: #34d399; }
+      #missionMini[data-tone="danger"] #missionMiniFill { background: #fb7185; }
+      #missionMini[data-tone="win"] #missionMiniFill { background: #67e8f9; }
       @keyframes pulseLive { 0%,100%{opacity:1} 50%{opacity:.72} }
       @keyframes pulseDanger { 0%,100%{opacity:1} 50%{opacity:.52} }
       #tip {
@@ -136,6 +167,11 @@
           font-size: 11px;
           padding: 3px 8px;
         }
+        #missionMini {
+          width: min(250px, 74vw);
+          padding: 5px 7px;
+        }
+        #missionMiniLabel { font-size: 11px; }
       }
     </style>
   </head>
@@ -145,6 +181,10 @@
       <span class="pill"><span class="k">Ammo:</span> <span id="ammo">∞</span></span>
       <span class="pill"><span class="k">Misión:</span> <span id="missionStatus">En curso</span></span>
       <div class="k" style="margin-top:6px"><span id="missionObjective">Derribá los 3 drones y extraé en el faro</span> · <span id="missionTimer">Tiempo: 75s</span></div>
+      <div id="missionMini" data-tone="neutral" aria-hidden="true">
+        <span id="missionMiniLabel">Inicio en 3s</span>
+        <div id="missionMiniBar"><div id="missionMiniFill"></div></div>
+      </div>
       <div class="k" style="margin-top:6px">
         Desktop: click to lock pointer · Move WASD · Jump Space · Shoot Click · Restart R
         <br/>Mobile: dual-stick (mano configurable) · FIRE / J · ↻ · alerta crítica visual/háptica
