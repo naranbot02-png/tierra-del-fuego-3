@@ -14,6 +14,7 @@ const $lookStick = document.getElementById('lookStick');
 const $btnFire = document.getElementById('btnFire');
 const $btnJump = document.getElementById('btnJump');
 const $btnLayout = document.getElementById('btnLayout');
+const $btnRestart = document.getElementById('btnRestart');
 
 const isTouch = matchMedia('(pointer: coarse)').matches;
 const MOBILE_MAX_DPR = 1.25; // perf guard for webviews/phones
@@ -23,7 +24,6 @@ const DESKTOP_MAX_DPR = 2;
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, isTouch ? MOBILE_MAX_DPR : DESKTOP_MAX_DPR));
 renderer.setSize(innerWidth, innerHeight);
-// Make colors/lights look correct across phones/browsers
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.25;
@@ -43,7 +43,7 @@ const sun = new THREE.DirectionalLight(0xdbeafe, 1.35);
 sun.position.set(10, 18, 6);
 scene.add(sun);
 
-// --- World: "Tierra del Fuego" vibe (stylized realistic)
+// --- World
 const groundMat = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 1.0 });
 const iceMat = new THREE.MeshStandardMaterial({ color: 0x25314f, roughness: 0.8, metalness: 0.05 });
 const metalMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.55, metalness: 0.35 });
@@ -53,7 +53,6 @@ const ground = new THREE.Mesh(new THREE.PlaneGeometry(240, 240), groundMat);
 ground.rotation.x = -Math.PI / 2;
 scene.add(ground);
 
-// simple "industrial outpost" blocks
 function addBox(x,y,z,w,h,d,mat){
   const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), mat);
   m.position.set(x,y,z);
@@ -61,14 +60,12 @@ function addBox(x,y,z,w,h,d,mat){
   return m;
 }
 
-// Walls / cover (put most of the geometry "in front" of the spawn so you immediately see it)
 addBox(0, 1.2, 2, 30, 2.4, 1.0, metalMat);
 addBox(8, 1.2, 9, 1.0, 2.4, 14, metalMat);
 addBox(-10, 1.2, 13, 18, 2.4, 1.0, metalMat);
 addBox(-18, 1.2, 2, 1.0, 2.4, 28, metalMat);
 addBox(10, 1.2, -6, 28, 2.4, 1.0, metalMat);
 
-// Big landmark so you always have something to look at
 addBox(0, 3.0, 24, 10, 6.0, 10, new THREE.MeshStandardMaterial({ color: 0x0ea5e9, roughness: 0.55, metalness: 0.15, emissive: 0x0ea5e9, emissiveIntensity: 0.45 }));
 const beacon = new THREE.Mesh(
   new THREE.SphereGeometry(0.9, 18, 12),
@@ -80,7 +77,6 @@ const beaconLight = new THREE.PointLight(0x67e8f9, 2.5, 45, 2);
 beaconLight.position.copy(beacon.position);
 scene.add(beaconLight);
 
-// "ice" patches
 for (let i=0;i<12;i++){
   const x = (Math.random()*2-1) * 60;
   const z = (Math.random()*2-1) * 60;
@@ -91,22 +87,21 @@ for (let i=0;i<12;i++){
   scene.add(ice);
 }
 
-// some lights
 for (let i=0;i<6;i++){
   const lx = -14 + i*6;
-  const pole = addBox(lx, 2.0, -14, 0.2, 4.0, 0.2, metalMat);
-  const lamp = addBox(lx, 4.1, -14, 0.8, 0.35, 0.8, lightMat);
+  addBox(lx, 2.0, -14, 0.2, 4.0, 0.2, metalMat);
+  addBox(lx, 4.1, -14, 0.8, 0.35, 0.8, lightMat);
   const pt = new THREE.PointLight(0xa5f3fc, 0.8, 18, 2);
   pt.position.set(lx, 4.1, -14);
   scene.add(pt);
 }
 
-// --- Player controller (simple FPS)
+// --- Player controller
+const SPAWN_POS = new THREE.Vector3(-6, 1.7, 12);
 const state = {
   hp: 100,
-  pos: new THREE.Vector3(-6, 1.7, 12),
+  pos: SPAWN_POS.clone(),
   velY: 0,
-  // Start facing the big landmark so first frame is never “empty/black”
   yaw: 0,
   pitch: 0.18,
   onGround: false,
@@ -118,10 +113,12 @@ const mission = {
   kills: 0,
   timeLimit: 75,
   timeLeft: 75,
-  status: 'playing', // playing | win | lose
+  phase: 'prep', // prep | playing | result
+  result: null, // win | lose | null
+  prepDuration: 2.8,
+  prepLeft: 2.8,
 };
 
-// Force initial heading towards landmark at (0,3,24)
 {
   const toX = 0 - state.pos.x;
   const toZ = 24 - state.pos.z;
@@ -129,7 +126,65 @@ const mission = {
 }
 
 const keys = new Set();
-addEventListener('keydown', (e) => keys.add(e.code));
+
+// --- Minimal WebAudio SFX (no external assets)
+let audioCtx = null;
+function ensureAudio() {
+  if (!audioCtx) {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return null;
+    audioCtx = new Ctx();
+  }
+  if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+  return audioCtx;
+}
+function beep({ freq = 440, duration = 0.08, type = 'sine', gain = 0.03, freqTo = null }) {
+  const ctx = ensureAudio();
+  if (!ctx) return;
+  const t0 = ctx.currentTime;
+  const osc = ctx.createOscillator();
+  const g = ctx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, t0);
+  if (freqTo != null) osc.frequency.exponentialRampToValueAtTime(Math.max(20, freqTo), t0 + duration);
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(gain, t0 + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
+  osc.connect(g);
+  g.connect(ctx.destination);
+  osc.start(t0);
+  osc.stop(t0 + duration + 0.02);
+}
+
+function sfxShot() { beep({ freq: 220, freqTo: 120, duration: 0.045, type: 'square', gain: 0.025 }); }
+function sfxHit() { beep({ freq: 880, duration: 0.04, type: 'triangle', gain: 0.03 }); }
+function sfxKill() {
+  beep({ freq: 540, duration: 0.05, type: 'sawtooth', gain: 0.03 });
+  setTimeout(() => beep({ freq: 740, duration: 0.06, type: 'triangle', gain: 0.028 }), 30);
+}
+function sfxDamage() { beep({ freq: 160, duration: 0.08, type: 'square', gain: 0.03 }); }
+function sfxStart() {
+  beep({ freq: 620, duration: 0.05, type: 'triangle', gain: 0.028 });
+  setTimeout(() => beep({ freq: 820, duration: 0.06, type: 'triangle', gain: 0.028 }), 45);
+}
+function sfxWin() {
+  beep({ freq: 660, duration: 0.08, type: 'triangle', gain: 0.03 });
+  setTimeout(() => beep({ freq: 880, duration: 0.09, type: 'triangle', gain: 0.03 }), 70);
+  setTimeout(() => beep({ freq: 1180, duration: 0.12, type: 'triangle', gain: 0.03 }), 160);
+}
+function sfxLose() {
+  beep({ freq: 320, duration: 0.08, type: 'sawtooth', gain: 0.03 });
+  setTimeout(() => beep({ freq: 220, duration: 0.11, type: 'sawtooth', gain: 0.03 }), 75);
+}
+
+addEventListener('keydown', (e) => {
+  keys.add(e.code);
+  if (e.code === 'KeyR') {
+    e.preventDefault();
+    resetMission(true);
+  }
+  ensureAudio();
+});
 addEventListener('keyup', (e) => keys.delete(e.code));
 
 // Touch controls
@@ -141,8 +196,7 @@ const touch = {
   jump: false,
 };
 
-// Mobile tuning (Sprint 1)
-const MOBILE_LOOK_SENS = 1.65; // lower = less jumpy
+const MOBILE_LOOK_SENS = 1.65;
 const MOBILE_LOOK_DEADZONE = 0.18;
 
 function applyDeadzone(v, dz) {
@@ -202,7 +256,6 @@ function setupPad(padEl, stickEl, onMove){
     center = { x: r.left + r.width/2, y: r.top + r.height/2 };
   };
 
-  // Pointer Events (Android/modern browsers)
   if (hasPointer) {
     padEl.addEventListener('pointerdown', (e) => {
       e.preventDefault();
@@ -210,6 +263,7 @@ function setupPad(padEl, stickEl, onMove){
       padEl.setPointerCapture?.(pid);
       refreshCenter();
       setStick(e.clientX - center.x, e.clientY - center.y);
+      ensureAudio();
     });
     padEl.addEventListener('pointermove', (e) => {
       if (pid !== e.pointerId) return;
@@ -225,7 +279,6 @@ function setupPad(padEl, stickEl, onMove){
     return;
   }
 
-  // Touch fallback (legacy/edge webviews)
   const findTouchById = (list, id) => {
     for (let i = 0; i < list.length; i++) {
       if (list[i].identifier === id) return list[i];
@@ -242,6 +295,7 @@ function setupPad(padEl, stickEl, onMove){
       touchId = t.identifier;
       refreshCenter();
       setStick(t.clientX - center.x, t.clientY - center.y);
+      ensureAudio();
     }
   }, { passive: false });
 
@@ -281,7 +335,7 @@ setupPad($lookPad, $lookStick, (x,y) => {
 
 if ($btnFire) {
   const hasPointer = ('PointerEvent' in window) && !isTouch;
-  const down = (e) => { e.preventDefault(); state.fire = true; };
+  const down = (e) => { e.preventDefault(); state.fire = true; ensureAudio(); };
   const up = (e) => { e.preventDefault(); state.fire = false; };
   if (hasPointer) {
     $btnFire.addEventListener('pointerdown', down);
@@ -295,7 +349,7 @@ if ($btnFire) {
 }
 if ($btnJump) {
   const hasPointer = ('PointerEvent' in window) && !isTouch;
-  const down = (e) => { e.preventDefault(); touch.jump = true; };
+  const down = (e) => { e.preventDefault(); touch.jump = true; ensureAudio(); };
   const up = (e) => { e.preventDefault(); touch.jump = false; };
   if (hasPointer) {
     $btnJump.addEventListener('pointerdown', down);
@@ -307,11 +361,23 @@ if ($btnJump) {
     $btnJump.addEventListener('touchcancel', up, { passive: false });
   }
 }
+if ($btnRestart) {
+  const hasPointer = ('PointerEvent' in window) && !isTouch;
+  const restartDown = (e) => { e.preventDefault(); resetMission(true); ensureAudio(); };
+  if (hasPointer) {
+    $btnRestart.addEventListener('pointerdown', restartDown);
+  } else {
+    $btnRestart.addEventListener('touchstart', restartDown, { passive: false });
+  }
+}
 
 // Pointer lock on desktop
 let pointerLocked = false;
 if (!isTouch) {
-  renderer.domElement.addEventListener('click', () => renderer.domElement.requestPointerLock?.());
+  renderer.domElement.addEventListener('click', () => {
+    renderer.domElement.requestPointerLock?.();
+    ensureAudio();
+  });
   document.addEventListener('pointerlockchange', () => {
     pointerLocked = document.pointerLockElement === renderer.domElement;
     if ($tip) $tip.style.display = pointerLocked ? 'none' : 'block';
@@ -324,7 +390,6 @@ if (!isTouch) {
   });
 }
 
-// Crosshair
 const crosshair = new THREE.Mesh(
   new THREE.RingGeometry(0.012, 0.02, 16),
   new THREE.MeshBasicMaterial({ color: 0xe5e7eb, transparent: true, opacity: 0.85 })
@@ -333,7 +398,6 @@ crosshair.position.set(0, 0, -0.6);
 camera.add(crosshair);
 scene.add(camera);
 
-// Shooting (raycast)
 const raycaster = new THREE.Raycaster();
 let lastShot = 0;
 let recoilKick = 0;
@@ -342,7 +406,6 @@ let shotPulseUntil = 0;
 let muzzleFlashUntil = 0;
 let shakeUntil = 0;
 
-// HUD feedback (hit marker)
 const hitMarker = document.createElement('div');
 hitMarker.style.position = 'fixed';
 hitMarker.style.left = '50%';
@@ -366,7 +429,6 @@ muzzleFlash.style.opacity = '0';
 muzzleFlash.style.background = 'radial-gradient(circle at 50% 52%, rgba(251,191,36,0.28) 0%, rgba(251,191,36,0.14) 12%, rgba(0,0,0,0) 38%)';
 document.body.appendChild(muzzleFlash);
 
-// Enemies (3 simple drones)
 const enemies = [];
 const enemyMat = new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.55, metalness: 0.25, emissive: 0x220808, emissiveIntensity: 0.35 });
 function spawnEnemy(x,z){
@@ -376,29 +438,38 @@ function spawnEnemy(x,z){
   eye.position.set(0, 0.05, 0.42);
   body.add(eye);
   scene.add(body);
-  enemies.push({ mesh: body, hp: 3, dead: false, base: new THREE.Vector3(x,1.4,z), t: Math.random()*10, hitCd: 0 });
+  enemies.push({ mesh: body, hp: 3, dead: false, base: new THREE.Vector3(x,1.4,z), spawn: new THREE.Vector3(x,1.4,z), t: Math.random()*10, hitCd: 0 });
 }
 spawnEnemy(4, -2);
 spawnEnemy(-6, -8);
 spawnEnemy(6, 8);
 mission.targetKills = enemies.length;
 
+function resetEnemies() {
+  for (const e of enemies) {
+    e.hp = 3;
+    e.dead = false;
+    e.t = Math.random() * 10;
+    e.hitCd = 0;
+    e.mesh.scale.setScalar(1);
+    e.mesh.position.copy(e.spawn);
+  }
+}
+
 function updateEnemies(dt){
   for (const e of enemies){
     if (e.hp <= 0) continue;
     e.t += dt;
     e.hitCd = Math.max(0, e.hitCd - dt);
-    // simple patrol in small circle
     e.mesh.position.x = e.base.x + Math.sin(e.t*0.8)*1.3;
     e.mesh.position.z = e.base.z + Math.cos(e.t*0.7)*1.3;
-    // face player
     e.mesh.lookAt(state.pos.x, 1.4, state.pos.z);
 
-    // contact damage to force urgency in mission
     const dist = e.mesh.position.distanceTo(state.pos);
-    if (dist < 1.9 && e.hitCd <= 0 && mission.status === 'playing') {
+    if (dist < 1.9 && e.hitCd <= 0 && mission.phase === 'playing') {
       state.hp = Math.max(0, state.hp - 8);
       e.hitCd = 0.8;
+      sfxDamage();
     }
   }
 }
@@ -409,13 +480,12 @@ function doShoot(now){
   recoilKick = Math.min(recoilKick + 0.035, 0.09);
   shotPulseUntil = now + 80;
   muzzleFlashUntil = now + 45;
+  sfxShot();
 
-  // Ray from camera forward
   raycaster.setFromCamera(new THREE.Vector2(0,0), camera);
   const meshes = enemies.filter(e => e.hp>0).map(e => e.mesh);
   const hits = raycaster.intersectObjects(meshes, true);
   if (hits.length){
-    // find root enemy mesh
     let obj = hits[0].object;
     while (obj.parent && !meshes.includes(obj)) obj = obj.parent;
     const enemy = enemies.find(e => e.mesh === obj);
@@ -423,22 +493,22 @@ function doShoot(now){
       enemy.hp -= 1;
       hitMarkerUntil = now + 110;
       shakeUntil = now + 90;
-      // hit flash
+      sfxHit();
       enemy.mesh.material.emissiveIntensity = 1.1;
       setTimeout(() => { try{ enemy.mesh.material.emissiveIntensity = 0.35; } catch{} }, 60);
       if (enemy.hp <= 0 && !enemy.dead){
         enemy.dead = true;
         mission.kills += 1;
         enemy.mesh.scale.setScalar(0.001);
+        sfxKill();
       }
     }
   }
 }
 
-// Simple story prompt + puzzle stub
 const story = [
   'Río Grande, TDF. La tormenta cortó la comunicación con la base.',
-  'Encontrá el panel de energía y restablecé el enlace.',
+  'Eliminá drones hostiles cuando inicie la ventana táctica.',
 ];
 let storyIdx = 0;
 function showStory(){
@@ -449,54 +519,115 @@ function showStory(){
 showStory();
 initLayoutControl();
 addEventListener('click', () => { if (isTouch) { $tip && ($tip.style.display = 'none'); } });
-addEventListener('touchstart', () => { $tip && ($tip.style.display = 'none'); }, { passive: true });
+addEventListener('touchstart', () => { $tip && ($tip.style.display = 'none'); ensureAudio(); }, { passive: true });
 
-// Physics
 const GRAV = -18;
 const JUMP = 7.2;
 
+function setHudPhaseVisuals() {
+  if (!$missionStatus) return;
+  const phase = mission.phase;
+  $missionStatus.classList.remove('mission-prep', 'mission-live', 'mission-win', 'mission-lose');
+  if (phase === 'prep') $missionStatus.classList.add('mission-prep');
+  if (phase === 'playing') $missionStatus.classList.add('mission-live');
+  if (phase === 'result' && mission.result === 'win') $missionStatus.classList.add('mission-win');
+  if (phase === 'result' && mission.result === 'lose') $missionStatus.classList.add('mission-lose');
+}
+
+function resetMission(manual = false) {
+  mission.kills = 0;
+  mission.timeLeft = mission.timeLimit;
+  mission.phase = 'prep';
+  mission.result = null;
+  mission.prepLeft = mission.prepDuration;
+
+  state.hp = 100;
+  state.velY = 0;
+  state.onGround = false;
+  state.pos.copy(SPAWN_POS);
+  touch.jump = false;
+  state.fire = false;
+
+  resetEnemies();
+  if (manual) sfxStart();
+
+  if ($tip) {
+    $tip.textContent = 'Reinicio táctico: preparate…';
+    $tip.style.display = 'block';
+    setTimeout(() => {
+      if (mission.phase === 'prep') $tip.style.display = isTouch ? 'none' : $tip.style.display;
+    }, 850);
+  }
+}
+
 function updateMission(dt){
-  if (mission.status === 'playing') {
+  if (mission.phase === 'prep') {
+    mission.prepLeft = Math.max(0, mission.prepLeft - dt);
+    if (mission.prepLeft <= 0) {
+      mission.phase = 'playing';
+      sfxStart();
+      if ($tip) {
+        $tip.textContent = '¡Ventana táctica abierta! Neutralizá todos los drones.';
+        $tip.style.display = 'block';
+        if (isTouch) setTimeout(() => { if (mission.phase === 'playing') $tip.style.display = 'none'; }, 1000);
+      }
+    }
+  } else if (mission.phase === 'playing') {
     mission.timeLeft = Math.max(0, mission.timeLeft - dt);
     if (mission.kills >= mission.targetKills) {
-      mission.status = 'win';
+      mission.phase = 'result';
+      mission.result = 'win';
+      sfxWin();
       if ($tip) {
-        $tip.textContent = 'Misión cumplida: drones neutralizados. Zona asegurada.';
+        $tip.textContent = 'Misión cumplida. R para reiniciar.';
         $tip.style.display = 'block';
       }
     } else if (mission.timeLeft <= 0 || state.hp <= 0) {
-      mission.status = 'lose';
+      mission.phase = 'result';
+      mission.result = 'lose';
+      sfxLose();
       if ($tip) {
-        $tip.textContent = 'Misión fallida: sin tiempo o sin energía vital. Reintentá.';
+        $tip.textContent = 'Misión fallida. R para reintentar.';
         $tip.style.display = 'block';
       }
     }
   }
 
   if ($missionStatus) {
-    $missionStatus.textContent = mission.status === 'playing' ? 'En curso' : mission.status === 'win' ? 'Completada' : 'Fallida';
+    if (mission.phase === 'prep') $missionStatus.textContent = `Preparación ${Math.ceil(mission.prepLeft)}s`;
+    else if (mission.phase === 'playing') $missionStatus.textContent = 'En curso';
+    else $missionStatus.textContent = mission.result === 'win' ? 'Completada' : 'Fallida';
   }
+
   if ($missionObjective) {
-    $missionObjective.textContent = `Drones derribados: ${mission.kills}/${mission.targetKills}`;
+    if (mission.phase === 'prep') {
+      $missionObjective.textContent = `Objetivo: derribar ${mission.targetKills} drones`;
+    } else if (mission.phase === 'playing') {
+      $missionObjective.textContent = `Drones derribados: ${mission.kills}/${mission.targetKills}`;
+    } else {
+      $missionObjective.textContent = mission.result === 'win'
+        ? 'Resultado: zona asegurada'
+        : 'Resultado: sin tiempo o sin energía';
+    }
   }
+
   if ($missionTimer) {
-    $missionTimer.textContent = `Tiempo: ${Math.ceil(mission.timeLeft)}s`;
+    if (mission.phase === 'prep') $missionTimer.textContent = `Inicio en: ${Math.ceil(mission.prepLeft)}s`;
+    else if (mission.phase === 'playing') $missionTimer.textContent = `Tiempo: ${Math.ceil(mission.timeLeft)}s`;
+    else $missionTimer.textContent = 'Reiniciar: tecla R / botón ↻';
   }
-  if ($hp) {
-    $hp.textContent = String(state.hp);
-  }
+
+  if ($hp) $hp.textContent = String(state.hp);
+  setHudPhaseVisuals();
 }
 
 function updatePlayer(dt){
-  // apply touch look (mobile)
   if (isTouch) {
-    // right pad gives -1..1; deadzone + smoother sensitivity for mobile
     state.yaw -= touch.lookX * dt * MOBILE_LOOK_SENS;
     state.pitch -= touch.lookY * dt * MOBILE_LOOK_SENS;
     state.pitch = Math.max(-1.25, Math.min(1.0, state.pitch));
   }
 
-  // movement (WASD + left pad)
   let mx = 0, mz = 0;
   if (keys.has('KeyA')) mx -= 1;
   if (keys.has('KeyD')) mx += 1;
@@ -506,11 +637,9 @@ function updatePlayer(dt){
   mx += touch.moveX;
   mz += touch.moveY;
 
-  // normalize
   const len = Math.hypot(mx, mz);
   if (len > 1e-3) { mx /= Math.max(1, len); mz /= Math.max(1, len); }
 
-  // forward/right in XZ
   const forward = new THREE.Vector3(Math.sin(state.yaw), 0, Math.cos(state.yaw));
   const right = new THREE.Vector3(forward.z, 0, -forward.x);
 
@@ -518,34 +647,28 @@ function updatePlayer(dt){
   state.pos.addScaledVector(right, mx * speed * dt);
   state.pos.addScaledVector(forward, mz * speed * dt);
 
-  // jump
   const wantJump = keys.has('Space') || touch.jump;
   if (wantJump && state.onGround) {
     state.velY = JUMP;
     state.onGround = false;
   }
 
-  // gravity
   state.velY += GRAV * dt;
   state.pos.y += state.velY * dt;
 
-  // ground collision
   if (state.pos.y <= 1.7) {
     state.pos.y = 1.7;
     state.velY = 0;
     state.onGround = true;
   }
 
-  // simple bounds
   state.pos.x = THREE.MathUtils.clamp(state.pos.x, -80, 80);
   state.pos.z = THREE.MathUtils.clamp(state.pos.z, -80, 80);
 
-  // camera
   camera.position.copy(state.pos);
   camera.rotation.set(state.pitch, state.yaw, 0, 'YXZ');
 }
 
-// Resize
 addEventListener('resize', () => {
   renderer.setSize(innerWidth, innerHeight);
   camera.aspect = innerWidth / innerHeight;
@@ -562,16 +685,16 @@ function tick(){
   updateEnemies(dt);
   updateMission(dt);
 
-  const wantShoot = mission.status === 'playing' && ((!isTouch && pointerLocked && (keys.has('KeyF'))) || state.fire || (!isTouch && pointerLocked && (mouseDown)));
+  const canShoot = mission.phase === 'playing';
+  const wantShoot = canShoot && ((!isTouch && pointerLocked && (keys.has('KeyF'))) || state.fire || (!isTouch && pointerLocked && mouseDown));
   if (wantShoot) doShoot(now);
 
-  // Gunfeel feedback
   recoilKick = Math.max(0, recoilKick - dt * 0.22);
   camera.rotation.x -= recoilKick;
 
   if (now < shakeUntil) {
     const k = (shakeUntil - now) / 90;
-    const amp = isTouch ? 0.010 : 0.018; // less nausea on mobile
+    const amp = isTouch ? 0.010 : 0.018;
     camera.rotation.x += (Math.random() - 0.5) * amp * k;
     camera.rotation.y += (Math.random() - 0.5) * amp * k;
   }
@@ -588,10 +711,11 @@ function tick(){
 }
 
 let mouseDown = false;
-addEventListener('mousedown', () => { mouseDown = true; });
+addEventListener('mousedown', () => { mouseDown = true; ensureAudio(); });
 addEventListener('mouseup', () => { mouseDown = false; });
 
 $hp.textContent = String(state.hp);
 $ammo.textContent = '∞';
+resetMission(false);
 
 tick();

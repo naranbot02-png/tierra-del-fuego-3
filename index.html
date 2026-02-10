@@ -15,6 +15,12 @@
       }
       #hud .k { color:#9ca3af; }
       #hud .pill { display:inline-block; padding:2px 8px; border:1px solid rgba(255,255,255,.15); border-radius:999px; margin-right:6px; }
+      #missionStatus { transition: color 140ms ease, text-shadow 140ms ease; }
+      #missionStatus.mission-prep { color:#fde68a; text-shadow:0 0 12px rgba(250,204,21,.3); }
+      #missionStatus.mission-live { color:#86efac; text-shadow:0 0 12px rgba(22,163,74,.28); animation: pulseLive 1.2s ease-in-out infinite; }
+      #missionStatus.mission-win { color:#67e8f9; text-shadow:0 0 12px rgba(14,165,233,.45); }
+      #missionStatus.mission-lose { color:#fca5a5; text-shadow:0 0 12px rgba(239,68,68,.45); }
+      @keyframes pulseLive { 0%,100%{opacity:1} 50%{opacity:.72} }
       #tip {
         position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);
         padding: 10px 14px; border-radius: 10px;
@@ -49,7 +55,7 @@
       #movePad { left: 18px; bottom: 18px; }
       #lookPad { right: 18px; bottom: 18px; }
 
-      #btnFire, #btnJump {
+      #btnFire, #btnJump, #btnRestart {
         position: absolute;
         width: 92px; height: 92px;
         border-radius: 20px;
@@ -63,6 +69,7 @@
       /* Keep action buttons on the right side, above the look pad, without overlap */
       #btnFire { right: 26px; bottom: 196px; }
       #btnJump { right: 34px; bottom: 300px; width: 72px; height: 72px; border-radius: 18px; font-weight: 900; }
+      #btnRestart { left: 14px; top: max(16px, env(safe-area-inset-top)); width: 46px; height: 46px; border-radius: 12px; font-weight: 900; font-size: 20px; background: rgba(0,0,0,.35); }
 
       /* Compact layout: bring controls closer to thumbs */
       body.layout-compact #movePad { left: 8px; bottom: 8px; width: 148px; height: 148px; }
@@ -83,8 +90,8 @@
       <span class="pill"><span class="k">Misión:</span> <span id="missionStatus">En curso</span></span>
       <div class="k" style="margin-top:6px"><span id="missionObjective">Derribá los 3 drones de patrulla</span> · <span id="missionTimer">Tiempo: 75s</span></div>
       <div class="k" style="margin-top:6px">
-        Desktop: click to lock pointer · Move WASD · Jump Space · Shoot Click
-        <br/>Mobile: left pad move · right pad look · FIRE / J
+        Desktop: click to lock pointer · Move WASD · Jump Space · Shoot Click · Restart R
+        <br/>Mobile: left pad move · right pad look · FIRE / J · ↻
       </div>
       <button id="btnLayout" type="button" style="margin-top:8px;border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.35);color:#fff;border-radius:999px;padding:4px 10px;font-size:12px;">Layout: Cómodo</button>
     </div>
@@ -96,6 +103,7 @@
       <div id="lookPad" class="pad"><div id="lookStick" class="stick"></div></div>
       <button id="btnFire" type="button">FIRE</button>
       <button id="btnJump" type="button">J</button>
+      <button id="btnRestart" type="button" aria-label="Reiniciar misión">↻</button>
     </div>
 
     <script type="module" src="./src/main.js"></script>
