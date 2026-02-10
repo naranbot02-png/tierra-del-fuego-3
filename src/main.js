@@ -830,6 +830,9 @@ function updateMission(dt){
   }
 
   const extractionPct = Math.round((mission.extractionProgress / mission.extractionDuration) * 100);
+  const mobileCopy = isTouch;
+  const threatLabel = getThreatLevel().label;
+  const threatShort = `A-${threatLabel}`;
 
   if ($missionStatus) {
     if (mission.phase === 'prep') {
@@ -845,29 +848,36 @@ function updateMission(dt){
 
   if ($missionObjective) {
     if (mission.phase === 'prep') {
-      $missionObjective.textContent = `Objetivo: derribar ${mission.targetKills} drones y extraer en el faro`;
+      $missionObjective.textContent = mobileCopy
+        ? `Drones ${mission.targetKills} + faro`
+        : `Objetivo: derribar ${mission.targetKills} drones y extraer en el faro`;
     } else if (mission.phase === 'playing' && mission.extractionReady) {
       $missionObjective.textContent = mission.extractionInside
-        ? `Sostené posición en el faro: ${extractionPct}%`
-        : `Volvé al faro para extraer: ${extractionPct}%`;
+        ? (mobileCopy ? `Extracción ${extractionPct}%` : `Sostené posición en el faro: ${extractionPct}%`)
+        : (mobileCopy ? `Volvé al faro ${extractionPct}%` : `Volvé al faro para extraer: ${extractionPct}%`);
     } else if (mission.phase === 'playing') {
-      $missionObjective.textContent = `Drones derribados: ${mission.kills}/${mission.targetKills} · Amenaza ${getThreatLevel().label}`;
+      $missionObjective.textContent = mobileCopy
+        ? `Drones ${mission.kills}/${mission.targetKills} · ${threatShort}`
+        : `Drones derribados: ${mission.kills}/${mission.targetKills} · Amenaza ${threatLabel}`;
     } else {
       $missionObjective.textContent = mission.result === 'win'
-        ? 'Resultado: zona asegurada'
-        : 'Resultado: sin tiempo o sin energía';
+        ? (mobileCopy ? 'Zona asegurada' : 'Resultado: zona asegurada')
+        : (mobileCopy ? 'Sin tiempo/energía' : 'Resultado: sin tiempo o sin energía');
     }
   }
 
   if ($missionTimer) {
     if (mission.phase === 'prep') {
-      $missionTimer.textContent = `Inicio en: ${Math.ceil(mission.prepLeft)}s`;
+      $missionTimer.textContent = mobileCopy
+        ? `T-${Math.ceil(mission.prepLeft)}s`
+        : `Inicio en: ${Math.ceil(mission.prepLeft)}s`;
     } else if (mission.phase === 'playing') {
+      const timeCompact = `${Math.ceil(mission.timeLeft)}s`;
       $missionTimer.textContent = mission.extractionReady
-        ? `Tiempo: ${Math.ceil(mission.timeLeft)}s · Amenaza ${getThreatLevel().label}`
-        : `Tiempo: ${Math.ceil(mission.timeLeft)}s`;
+        ? (mobileCopy ? `${timeCompact} · ${threatShort}` : `Tiempo: ${timeCompact} · Amenaza ${threatLabel}`)
+        : (mobileCopy ? timeCompact : `Tiempo: ${timeCompact}`);
     } else {
-      $missionTimer.textContent = 'Reiniciar: tecla R / botón ↻';
+      $missionTimer.textContent = mobileCopy ? '↻ Reiniciar' : 'Reiniciar: tecla R / botón ↻';
     }
 
     const criticalTime = mission.phase === 'playing' && mission.timeLeft <= 15;

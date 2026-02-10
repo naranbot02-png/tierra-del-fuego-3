@@ -15,6 +15,7 @@
   - Señal visual del faro/aro y feedback háptico breve al entrar en zona en mobile.
   - Indicador direccional discreto al faro durante extracción (mobile-first, sin bloquear touch).
   - Mini barra de objetivo (combat/extracción/resultado) para lectura rápida en pantallas chicas.
+  - Copy adaptativo en mobile: objetivo/timer más cortos en `pointer: coarse` para reducir ruido visual.
 
 ## Qué probar (rápido)
 
