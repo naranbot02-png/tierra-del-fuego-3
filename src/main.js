@@ -277,6 +277,10 @@ addEventListener('keydown', (e) => {
     e.preventDefault();
     resetMission(true);
   }
+  if (e.code === 'KeyI') {
+    e.preventDefault();
+    setInputDebugEnabled(!inputDebug.enabled);
+  }
   ensureAudio();
 });
 addEventListener('keyup', (e) => keys.delete(e.code));
@@ -289,6 +293,24 @@ const touch = {
   lookY: 0,
   jump: false,
 };
+
+const inputDebug = {
+  enabled: false,
+  lastLogAt: 0,
+};
+
+function setInputDebugEnabled(enabled) {
+  inputDebug.enabled = enabled;
+  if ($tip) {
+    if (enabled) {
+      $tip.style.display = 'block';
+      $tip.textContent = 'DEBUG INPUT ON (tecla I para ocultar)';
+    } else if (mission.phase === 'playing' && isTouch) {
+      $tip.style.display = 'none';
+    }
+  }
+  if (!enabled) console.info('[input-debug] off');
+}
 
 const LOOK_PRESETS = [
   { id: 'precise', label: 'Precisa', sens: 1.2 },
@@ -689,8 +711,91 @@ const COLLISION_SWEEP_EPS = 0.0001;
 const COLLISION_AXIS_EPS = 1e-8;
 const COLLISION_MAX_SLIDES = 4;
 
+const MOVE_SPEED = 5.6;
 const tempForward = new THREE.Vector3();
 const tempRight = new THREE.Vector3();
+
+/*
+Manual smoke tests (input refactor):
+1) yaw=0°   -> W/touch arriba: Z-, S/touch abajo: Z+
+2) yaw=180° -> W/touch arriba: Z+, S/touch abajo: Z-
+3) yaw=90°  -> W/touch arriba: X+, S/touch abajo: X-
+4) A/izquierda => X- local, D/derecha => X+ local
+5) Tecla I: mostrar/ocultar debug (intent/world)
+*/
+
+function getKeyboardIntentAxes() {
+  let x = 0;
+  let y = 0;
+  if (keys.has('KeyA')) x -= 1;
+  if (keys.has('KeyD')) x += 1;
+  if (keys.has('KeyW')) y += 1;
+  if (keys.has('KeyS')) y -= 1;
+  return { x, y };
+}
+
+function getTouchIntentAxes() {
+  // Stick Y UI: arriba es negativo. Convención de intención: +Y avanza.
+  return {
+    x: touch.moveX,
+    y: -touch.moveY,
+  };
+}
+
+function normalizeIntentAxes(...sources) {
+  let x = 0;
+  let y = 0;
+
+  for (const source of sources) {
+    x += source.x;
+    y += source.y;
+  }
+
+  const len = Math.hypot(x, y);
+  if (len > 1) {
+    x /= len;
+    y /= len;
+  }
+
+  return { x, y };
+}
+
+function intentToWorldDelta(intentX, intentY, yaw, dt, speed = MOVE_SPEED) {
+  // forward local = +Y intención
+  tempForward.set(Math.sin(yaw), 0, -Math.cos(yaw));
+  tempRight.set(Math.cos(yaw), 0, Math.sin(yaw));
+
+  const worldX = (tempRight.x * intentX + tempForward.x * intentY) * speed * dt;
+  const worldZ = (tempRight.z * intentX + tempForward.z * intentY) * speed * dt;
+  return { worldX, worldZ };
+}
+
+function applyMovementFromIntent(intentX, intentY, dt) {
+  const { worldX, worldZ } = intentToWorldDelta(intentX, intentY, state.yaw, dt);
+  movePlayerWithCollisions(worldX, worldZ);
+  return { worldX, worldZ };
+}
+
+function maybeLogInputDebug(now, intentX, intentY, worldX, worldZ) {
+  if (!inputDebug.enabled) return;
+
+  const msg = `DEBUG in(${intentX.toFixed(2)}, ${intentY.toFixed(2)}) world(${worldX.toFixed(2)}, ${worldZ.toFixed(2)}) yaw=${THREE.MathUtils.radToDeg(state.yaw).toFixed(1)}°`;
+  if ($tip) {
+    $tip.style.display = 'block';
+    $tip.textContent = msg;
+  }
+
+  if (now - inputDebug.lastLogAt > 250) {
+    console.info('[input-debug]', {
+      intentX: Number(intentX.toFixed(3)),
+      intentY: Number(intentY.toFixed(3)),
+      worldX: Number(worldX.toFixed(3)),
+      worldZ: Number(worldZ.toFixed(3)),
+      yawDeg: Number(THREE.MathUtils.radToDeg(state.yaw).toFixed(1)),
+    });
+    inputDebug.lastLogAt = now;
+  }
+}
 
 function colliderOverlapsPlayerHeight(collider) {
   const feetY = state.pos.y - PLAYER_EYE_HEIGHT;
@@ -1175,34 +1280,18 @@ function updateExtractionIndicator() {
   }
 }
 
-function updatePlayer(dt){
+function updatePlayer(dt, now){
   if (isTouch) {
     state.yaw -= touch.lookX * dt * mobileLookSens;
     state.pitch -= touch.lookY * dt * mobileLookSens;
     state.pitch = Math.max(-1.25, Math.min(1.0, state.pitch));
   }
 
-  let mx = 0, mz = 0;
-  if (keys.has('KeyA')) mx -= 1;
-  if (keys.has('KeyD')) mx += 1;
-  if (keys.has('KeyW')) mz += 1;
-  if (keys.has('KeyS')) mz -= 1;
-
-  mx += touch.moveX;
-  // Touch Y is negative when pushing up; invert so up = forward.
-  mz -= touch.moveY;
-
-  const len = Math.hypot(mx, mz);
-  if (len > 1e-3) { mx /= Math.max(1, len); mz /= Math.max(1, len); }
-
-  // Align movement with camera facing direction (camera forward on XZ plane)
-  tempForward.set(Math.sin(state.yaw), 0, -Math.cos(state.yaw));
-  tempRight.set(Math.cos(state.yaw), 0, Math.sin(state.yaw));
-
-  const speed = 5.6;
-  const moveX = (tempRight.x * mx + tempForward.x * mz) * speed * dt;
-  const moveZ = (tempRight.z * mx + tempForward.z * mz) * speed * dt;
-  movePlayerWithCollisions(moveX, moveZ);
+  const keyboardIntent = getKeyboardIntentAxes();
+  const touchIntent = getTouchIntentAxes();
+  const intent = normalizeIntentAxes(keyboardIntent, touchIntent);
+  const { worldX, worldZ } = applyMovementFromIntent(intent.x, intent.y, dt);
+  maybeLogInputDebug(now, intent.x, intent.y, worldX, worldZ);
 
   const wantJump = keys.has('Space') || touch.jump;
   if (wantJump && state.onGround) {
@@ -1235,7 +1324,7 @@ function tick(){
   const dt = Math.min(clock.getDelta(), 0.033);
   const now = performance.now();
 
-  updatePlayer(dt);
+  updatePlayer(dt, now);
   updateEnemies(dt);
   updateMission(dt);
   updateBeaconState(now);
