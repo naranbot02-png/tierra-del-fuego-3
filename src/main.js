@@ -547,6 +547,7 @@ let hitMarkerUntil = 0;
 let shotPulseUntil = 0;
 let muzzleFlashUntil = 0;
 let shakeUntil = 0;
+let lastDamageAt = 0;
 
 const hitMarker = document.createElement('div');
 hitMarker.style.position = 'fixed';
@@ -570,6 +571,15 @@ muzzleFlash.style.zIndex = '24';
 muzzleFlash.style.opacity = '0';
 muzzleFlash.style.background = 'radial-gradient(circle at 50% 52%, rgba(251,191,36,0.28) 0%, rgba(251,191,36,0.14) 12%, rgba(0,0,0,0) 38%)';
 document.body.appendChild(muzzleFlash);
+
+const damageOverlay = document.createElement('div');
+damageOverlay.style.position = 'fixed';
+damageOverlay.style.inset = '0';
+damageOverlay.style.pointerEvents = 'none';
+damageOverlay.style.zIndex = '23';
+damageOverlay.style.opacity = '0';
+damageOverlay.style.background = 'radial-gradient(circle at 50% 50%, rgba(220,38,38,0) 45%, rgba(220,38,38,0.35) 100%)';
+document.body.appendChild(damageOverlay);
 
 const enemies = [];
 const enemyMat = new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.55, metalness: 0.25, emissive: 0x220808, emissiveIntensity: 0.35 });
@@ -612,6 +622,7 @@ function updateEnemies(dt){
     if (dist < 1.9 && e.hitCd <= 0 && mission.phase === 'playing') {
       state.hp = Math.max(0, state.hp - threat.damage);
       e.hitCd = threat.hitCooldown;
+      lastDamageAt = performance.now();
       sfxDamage();
       if (isTouch && navigator.vibrate) navigator.vibrate(12);
     }
@@ -912,6 +923,7 @@ function resetMission(manual = false) {
   state.pos.copy(SPAWN_POS);
   touch.jump = false;
   state.fire = false;
+  lastDamageAt = 0;
 
   if ($missionFeed) $missionFeed.classList.remove('show', 'feed-warn', 'feed-danger', 'feed-good');
 
@@ -1247,6 +1259,10 @@ function tick(){
 
   hitMarker.style.opacity = now < hitMarkerUntil ? '1' : '0';
   muzzleFlash.style.opacity = now < muzzleFlashUntil ? '1' : '0';
+
+  const lowHpIntensity = THREE.MathUtils.clamp((45 - state.hp) / 45, 0, 1) * 0.55;
+  const damagePulse = THREE.MathUtils.clamp((280 - (now - lastDamageAt)) / 280, 0, 1) * 0.6;
+  damageOverlay.style.opacity = Math.max(lowHpIntensity, damagePulse).toFixed(2);
 
   renderer.render(scene, camera);
   requestAnimationFrame(tick);
