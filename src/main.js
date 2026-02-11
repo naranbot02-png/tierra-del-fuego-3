@@ -1185,11 +1185,11 @@ function updatePlayer(dt){
   let mx = 0, mz = 0;
   if (keys.has('KeyA')) mx -= 1;
   if (keys.has('KeyD')) mx += 1;
-  if (keys.has('KeyW')) mz += 1;
-  if (keys.has('KeyS')) mz -= 1;
+  if (keys.has('KeyW')) mz -= 1;
+  if (keys.has('KeyS')) mz += 1;
 
   mx += touch.moveX;
-  mz -= touch.moveY;
+  mz += touch.moveY;
 
   const len = Math.hypot(mx, mz);
   if (len > 1e-3) { mx /= Math.max(1, len); mz /= Math.max(1, len); }
