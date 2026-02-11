@@ -712,6 +712,7 @@ const COLLISION_AXIS_EPS = 1e-8;
 const COLLISION_MAX_SLIDES = 4;
 
 const MOVE_SPEED = 5.6;
+const WORLD_UP = new THREE.Vector3(0, 1, 0);
 const tempForward = new THREE.Vector3();
 const tempRight = new THREE.Vector3();
 
@@ -760,10 +761,14 @@ function normalizeIntentAxes(...sources) {
   return { x, y };
 }
 
-function intentToWorldDelta(intentX, intentY, yaw, dt, speed = MOVE_SPEED) {
-  // forward local = +Y intención
-  tempForward.set(Math.sin(yaw), 0, -Math.cos(yaw));
-  tempRight.set(Math.cos(yaw), 0, Math.sin(yaw));
+function intentToWorldDelta(intentX, intentY, dt, speed = MOVE_SPEED) {
+  // Derive basis from actual camera forward, so input always matches what the player sees.
+  camera.rotation.set(state.pitch, state.yaw, 0, 'YXZ');
+  camera.getWorldDirection(tempForward);
+  tempForward.y = 0;
+  if (tempForward.lengthSq() > 1e-6) tempForward.normalize();
+
+  tempRight.crossVectors(tempForward, WORLD_UP).normalize();
 
   const worldX = (tempRight.x * intentX + tempForward.x * intentY) * speed * dt;
   const worldZ = (tempRight.z * intentX + tempForward.z * intentY) * speed * dt;
@@ -771,7 +776,7 @@ function intentToWorldDelta(intentX, intentY, yaw, dt, speed = MOVE_SPEED) {
 }
 
 function applyMovementFromIntent(intentX, intentY, dt) {
-  const { worldX, worldZ } = intentToWorldDelta(intentX, intentY, state.yaw, dt);
+  const { worldX, worldZ } = intentToWorldDelta(intentX, intentY, dt);
   movePlayerWithCollisions(worldX, worldZ);
   return { worldX, worldZ };
 }
