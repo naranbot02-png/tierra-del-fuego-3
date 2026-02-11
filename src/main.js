@@ -62,6 +62,8 @@ const ground = new THREE.Mesh(new THREE.PlaneGeometry(240, 240), groundMat);
 ground.rotation.x = -Math.PI / 2;
 scene.add(ground);
 
+const wallColliders = [];
+
 function addBox(x,y,z,w,h,d,mat){
   const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), mat);
   m.position.set(x,y,z);
@@ -69,11 +71,22 @@ function addBox(x,y,z,w,h,d,mat){
   return m;
 }
 
-addBox(0, 1.2, 2, 30, 2.4, 1.0, metalMat);
-addBox(8, 1.2, 9, 1.0, 2.4, 14, metalMat);
-addBox(-10, 1.2, 13, 18, 2.4, 1.0, metalMat);
-addBox(-18, 1.2, 2, 1.0, 2.4, 28, metalMat);
-addBox(10, 1.2, -6, 28, 2.4, 1.0, metalMat);
+function addWall(x,y,z,w,h,d,mat){
+  const wall = addBox(x, y, z, w, h, d, mat);
+  wallColliders.push({
+    minX: x - w / 2,
+    maxX: x + w / 2,
+    minZ: z - d / 2,
+    maxZ: z + d / 2,
+  });
+  return wall;
+}
+
+addWall(0, 1.2, 2, 30, 2.4, 1.0, metalMat);
+addWall(8, 1.2, 9, 1.0, 2.4, 14, metalMat);
+addWall(-10, 1.2, 13, 18, 2.4, 1.0, metalMat);
+addWall(-18, 1.2, 2, 1.0, 2.4, 28, metalMat);
+addWall(10, 1.2, -6, 28, 2.4, 1.0, metalMat);
 
 addBox(0, 3.0, 24, 10, 6.0, 10, new THREE.MeshStandardMaterial({ color: 0x0ea5e9, roughness: 0.55, metalness: 0.15, emissive: 0x0ea5e9, emissiveIntensity: 0.45 }));
 const beacon = new THREE.Mesh(
@@ -633,6 +646,62 @@ addEventListener('touchstart', () => { $tip && ($tip.style.display = 'none'); en
 
 const GRAV = -18;
 const JUMP = 7.2;
+const PLAYER_RADIUS = 0.38;
+const PLAYER_EYE_HEIGHT = 1.7;
+const WORLD_LIMIT = 80;
+const COLLISION_SKIN = 0.001;
+const COLLISION_STEP_MAX = 0.28;
+
+const tempForward = new THREE.Vector3();
+const tempRight = new THREE.Vector3();
+
+function movePlayerHorizontal(dx, dz) {
+  if (dx !== 0) {
+    state.pos.x += dx;
+
+    for (const wall of wallColliders) {
+      const minZ = wall.minZ - PLAYER_RADIUS;
+      const maxZ = wall.maxZ + PLAYER_RADIUS;
+      if (state.pos.z <= minZ || state.pos.z >= maxZ) continue;
+
+      const minX = wall.minX - PLAYER_RADIUS;
+      const maxX = wall.maxX + PLAYER_RADIUS;
+      if (state.pos.x > minX && state.pos.x < maxX) {
+        state.pos.x = dx > 0 ? (minX - COLLISION_SKIN) : (maxX + COLLISION_SKIN);
+      }
+    }
+  }
+
+  if (dz !== 0) {
+    state.pos.z += dz;
+
+    for (const wall of wallColliders) {
+      const minX = wall.minX - PLAYER_RADIUS;
+      const maxX = wall.maxX + PLAYER_RADIUS;
+      if (state.pos.x <= minX || state.pos.x >= maxX) continue;
+
+      const minZ = wall.minZ - PLAYER_RADIUS;
+      const maxZ = wall.maxZ + PLAYER_RADIUS;
+      if (state.pos.z > minZ && state.pos.z < maxZ) {
+        state.pos.z = dz > 0 ? (minZ - COLLISION_SKIN) : (maxZ + COLLISION_SKIN);
+      }
+    }
+  }
+
+  state.pos.x = THREE.MathUtils.clamp(state.pos.x, -WORLD_LIMIT + PLAYER_RADIUS, WORLD_LIMIT - PLAYER_RADIUS);
+  state.pos.z = THREE.MathUtils.clamp(state.pos.z, -WORLD_LIMIT + PLAYER_RADIUS, WORLD_LIMIT - PLAYER_RADIUS);
+}
+
+function movePlayerWithCollisions(dx, dz) {
+  const travel = Math.hypot(dx, dz);
+  const steps = Math.max(1, Math.ceil(travel / COLLISION_STEP_MAX));
+  const stepX = dx / steps;
+  const stepZ = dz / steps;
+
+  for (let i = 0; i < steps; i++) {
+    movePlayerHorizontal(stepX, stepZ);
+  }
+}
 
 function setHudPhaseVisuals() {
   if (!$missionStatus) return;
@@ -971,12 +1040,13 @@ function updatePlayer(dt){
   const len = Math.hypot(mx, mz);
   if (len > 1e-3) { mx /= Math.max(1, len); mz /= Math.max(1, len); }
 
-  const forward = new THREE.Vector3(Math.sin(state.yaw), 0, Math.cos(state.yaw));
-  const right = new THREE.Vector3(forward.z, 0, -forward.x);
+  tempForward.set(Math.sin(state.yaw), 0, Math.cos(state.yaw));
+  tempRight.set(tempForward.z, 0, -tempForward.x);
 
   const speed = 5.6;
-  state.pos.addScaledVector(right, mx * speed * dt);
-  state.pos.addScaledVector(forward, mz * speed * dt);
+  const moveX = (tempRight.x * mx + tempForward.x * mz) * speed * dt;
+  const moveZ = (tempRight.z * mx + tempForward.z * mz) * speed * dt;
+  movePlayerWithCollisions(moveX, moveZ);
 
   const wantJump = keys.has('Space') || touch.jump;
   if (wantJump && state.onGround) {
@@ -987,14 +1057,11 @@ function updatePlayer(dt){
   state.velY += GRAV * dt;
   state.pos.y += state.velY * dt;
 
-  if (state.pos.y <= 1.7) {
-    state.pos.y = 1.7;
+  if (state.pos.y <= PLAYER_EYE_HEIGHT) {
+    state.pos.y = PLAYER_EYE_HEIGHT;
     state.velY = 0;
     state.onGround = true;
   }
-
-  state.pos.x = THREE.MathUtils.clamp(state.pos.x, -80, 80);
-  state.pos.z = THREE.MathUtils.clamp(state.pos.z, -80, 80);
 
   camera.position.copy(state.pos);
   camera.rotation.set(state.pitch, state.yaw, 0, 'YXZ');
