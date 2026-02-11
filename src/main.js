@@ -1185,18 +1185,19 @@ function updatePlayer(dt){
   let mx = 0, mz = 0;
   if (keys.has('KeyA')) mx -= 1;
   if (keys.has('KeyD')) mx += 1;
-  if (keys.has('KeyW')) mz -= 1;
-  if (keys.has('KeyS')) mz += 1;
+  if (keys.has('KeyW')) mz += 1;
+  if (keys.has('KeyS')) mz -= 1;
 
   mx += touch.moveX;
-  mz += touch.moveY;
+  // Touch Y is negative when pushing up; invert so up = forward.
+  mz -= touch.moveY;
 
   const len = Math.hypot(mx, mz);
   if (len > 1e-3) { mx /= Math.max(1, len); mz /= Math.max(1, len); }
 
-  // Align movement with camera facing direction (Three camera looks toward -Z at yaw=0)
-  tempForward.set(-Math.sin(state.yaw), 0, -Math.cos(state.yaw));
-  tempRight.set(-tempForward.z, 0, tempForward.x);
+  // Align movement with camera facing direction (camera forward on XZ plane)
+  tempForward.set(Math.sin(state.yaw), 0, -Math.cos(state.yaw));
+  tempRight.set(Math.cos(state.yaw), 0, Math.sin(state.yaw));
 
   const speed = 5.6;
   const moveX = (tempRight.x * mx + tempForward.x * mz) * speed * dt;
