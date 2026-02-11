@@ -62,24 +62,35 @@ const ground = new THREE.Mesh(new THREE.PlaneGeometry(240, 240), groundMat);
 ground.rotation.x = -Math.PI / 2;
 scene.add(ground);
 
-const wallColliders = [];
+const staticColliders = [];
 
-function addBox(x,y,z,w,h,d,mat){
-  const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), mat);
-  m.position.set(x,y,z);
-  scene.add(m);
-  return m;
-}
-
-function addWall(x,y,z,w,h,d,mat){
-  const wall = addBox(x, y, z, w, h, d, mat);
-  wallColliders.push({
+function registerBoxCollider(x, y, z, w, h, d, tag = 'solid') {
+  staticColliders.push({
+    tag,
     minX: x - w / 2,
     maxX: x + w / 2,
+    minY: y - h / 2,
+    maxY: y + h / 2,
     minZ: z - d / 2,
     maxZ: z + d / 2,
   });
-  return wall;
+}
+
+function addBox(x, y, z, w, h, d, mat, opts = {}) {
+  const { solid = false, colliderTag = 'solid' } = opts;
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+  m.position.set(x, y, z);
+  scene.add(m);
+
+  if (solid) {
+    registerBoxCollider(x, y, z, w, h, d, colliderTag);
+  }
+
+  return m;
+}
+
+function addWall(x, y, z, w, h, d, mat) {
+  return addBox(x, y, z, w, h, d, mat, { solid: true, colliderTag: 'wall' });
 }
 
 addWall(0, 1.2, 2, 30, 2.4, 1.0, metalMat);
@@ -88,7 +99,16 @@ addWall(-10, 1.2, 13, 18, 2.4, 1.0, metalMat);
 addWall(-18, 1.2, 2, 1.0, 2.4, 28, metalMat);
 addWall(10, 1.2, -6, 28, 2.4, 1.0, metalMat);
 
-addBox(0, 3.0, 24, 10, 6.0, 10, new THREE.MeshStandardMaterial({ color: 0x0ea5e9, roughness: 0.55, metalness: 0.15, emissive: 0x0ea5e9, emissiveIntensity: 0.45 }));
+addBox(
+  0,
+  3.0,
+  24,
+  10,
+  6.0,
+  10,
+  new THREE.MeshStandardMaterial({ color: 0x0ea5e9, roughness: 0.55, metalness: 0.15, emissive: 0x0ea5e9, emissiveIntensity: 0.45 }),
+  { solid: true, colliderTag: 'beacon-base' }
+);
 const beacon = new THREE.Mesh(
   new THREE.SphereGeometry(0.9, 18, 12),
   new THREE.MeshStandardMaterial({ color: 0x67e8f9, emissive: 0x67e8f9, emissiveIntensity: 1.6 })
@@ -100,8 +120,11 @@ beaconLight.position.copy(beacon.position);
 scene.add(beaconLight);
 
 const EXTRACTION_POINT = new THREE.Vector2(beacon.position.x, beacon.position.z);
+const EXTRACTION_RADIUS = 6.5;
+const EXTRACTION_RING_INNER_RADIUS = 5.4;
+const EXTRACTION_RING_OUTER_RADIUS = 6.3;
 const extractionZone = new THREE.Mesh(
-  new THREE.RingGeometry(2.1, 2.9, 40),
+  new THREE.RingGeometry(EXTRACTION_RING_INNER_RADIUS, EXTRACTION_RING_OUTER_RADIUS, 56),
   new THREE.MeshBasicMaterial({
     color: 0x67e8f9,
     transparent: true,
@@ -154,7 +177,7 @@ const mission = {
   result: null, // win | lose | null
   prepDuration: 2.8,
   prepLeft: 2.8,
-  extractionRadius: 3.2,
+  extractionRadius: EXTRACTION_RADIUS,
   extractionDuration: 2.6,
   extractionProgress: 0,
   extractionReady: false,
@@ -648,59 +671,178 @@ const GRAV = -18;
 const JUMP = 7.2;
 const PLAYER_RADIUS = 0.38;
 const PLAYER_EYE_HEIGHT = 1.7;
+const PLAYER_BODY_HEIGHT = 1.72;
 const WORLD_LIMIT = 80;
-const COLLISION_SKIN = 0.001;
-const COLLISION_STEP_MAX = 0.28;
+const COLLISION_SKIN = 0.002;
+const COLLISION_SWEEP_EPS = 0.0001;
+const COLLISION_AXIS_EPS = 1e-8;
+const COLLISION_MAX_SLIDES = 4;
 
 const tempForward = new THREE.Vector3();
 const tempRight = new THREE.Vector3();
 
-function movePlayerHorizontal(dx, dz) {
-  if (dx !== 0) {
-    state.pos.x += dx;
+function colliderOverlapsPlayerHeight(collider) {
+  const feetY = state.pos.y - PLAYER_EYE_HEIGHT;
+  const headY = feetY + PLAYER_BODY_HEIGHT;
+  return headY > collider.minY && feetY < collider.maxY;
+}
 
-    for (const wall of wallColliders) {
-      const minZ = wall.minZ - PLAYER_RADIUS;
-      const maxZ = wall.maxZ + PLAYER_RADIUS;
-      if (state.pos.z <= minZ || state.pos.z >= maxZ) continue;
+function resolveCollidersOverlap() {
+  for (let pass = 0; pass < COLLISION_MAX_SLIDES; pass++) {
+    let separated = true;
 
-      const minX = wall.minX - PLAYER_RADIUS;
-      const maxX = wall.maxX + PLAYER_RADIUS;
-      if (state.pos.x > minX && state.pos.x < maxX) {
-        state.pos.x = dx > 0 ? (minX - COLLISION_SKIN) : (maxX + COLLISION_SKIN);
+    for (const collider of staticColliders) {
+      if (!colliderOverlapsPlayerHeight(collider)) continue;
+
+      const minX = collider.minX - PLAYER_RADIUS;
+      const maxX = collider.maxX + PLAYER_RADIUS;
+      const minZ = collider.minZ - PLAYER_RADIUS;
+      const maxZ = collider.maxZ + PLAYER_RADIUS;
+
+      if (state.pos.x <= minX || state.pos.x >= maxX || state.pos.z <= minZ || state.pos.z >= maxZ) continue;
+
+      separated = false;
+
+      const pushLeft = Math.abs(state.pos.x - minX);
+      const pushRight = Math.abs(maxX - state.pos.x);
+      const pushBack = Math.abs(state.pos.z - minZ);
+      const pushFront = Math.abs(maxZ - state.pos.z);
+
+      if (pushLeft <= pushRight && pushLeft <= pushBack && pushLeft <= pushFront) {
+        state.pos.x = minX - COLLISION_SKIN;
+      } else if (pushRight <= pushBack && pushRight <= pushFront) {
+        state.pos.x = maxX + COLLISION_SKIN;
+      } else if (pushBack <= pushFront) {
+        state.pos.z = minZ - COLLISION_SKIN;
+      } else {
+        state.pos.z = maxZ + COLLISION_SKIN;
       }
+    }
+
+    if (separated) break;
+  }
+}
+
+function sweepPointAgainstExpandedAabb(startX, startZ, moveX, moveZ, minX, maxX, minZ, maxZ) {
+  let tEnter = 0;
+  let tExit = 1;
+  let normalX = 0;
+  let normalZ = 0;
+
+  if (Math.abs(moveX) < COLLISION_AXIS_EPS) {
+    if (startX <= minX || startX >= maxX) return null;
+  } else {
+    let t1 = (minX - startX) / moveX;
+    let t2 = (maxX - startX) / moveX;
+    let enterNormalX = -1;
+
+    if (t1 > t2) {
+      [t1, t2] = [t2, t1];
+      enterNormalX = 1;
+    }
+
+    if (t1 > tEnter) {
+      tEnter = t1;
+      normalX = enterNormalX;
+      normalZ = 0;
+    }
+
+    tExit = Math.min(tExit, t2);
+    if (tEnter > tExit) return null;
+  }
+
+  if (Math.abs(moveZ) < COLLISION_AXIS_EPS) {
+    if (startZ <= minZ || startZ >= maxZ) return null;
+  } else {
+    let t1 = (minZ - startZ) / moveZ;
+    let t2 = (maxZ - startZ) / moveZ;
+    let enterNormalZ = -1;
+
+    if (t1 > t2) {
+      [t1, t2] = [t2, t1];
+      enterNormalZ = 1;
+    }
+
+    if (t1 > tEnter) {
+      tEnter = t1;
+      normalX = 0;
+      normalZ = enterNormalZ;
+    }
+
+    tExit = Math.min(tExit, t2);
+    if (tEnter > tExit) return null;
+  }
+
+  if (tEnter < 0 || tEnter > 1) return null;
+
+  return { t: tEnter, normalX, normalZ };
+}
+
+function findEarliestCollision(startX, startZ, moveX, moveZ) {
+  let earliest = null;
+
+  for (const collider of staticColliders) {
+    if (!colliderOverlapsPlayerHeight(collider)) continue;
+
+    const minX = collider.minX - PLAYER_RADIUS;
+    const maxX = collider.maxX + PLAYER_RADIUS;
+    const minZ = collider.minZ - PLAYER_RADIUS;
+    const maxZ = collider.maxZ + PLAYER_RADIUS;
+
+    const hit = sweepPointAgainstExpandedAabb(startX, startZ, moveX, moveZ, minX, maxX, minZ, maxZ);
+    if (!hit) continue;
+
+    if (!earliest || hit.t < earliest.t) {
+      earliest = hit;
     }
   }
 
-  if (dz !== 0) {
-    state.pos.z += dz;
+  return earliest;
+}
 
-    for (const wall of wallColliders) {
-      const minX = wall.minX - PLAYER_RADIUS;
-      const maxX = wall.maxX + PLAYER_RADIUS;
-      if (state.pos.x <= minX || state.pos.x >= maxX) continue;
+function movePlayerWithCollisions(dx, dz) {
+  resolveCollidersOverlap();
 
-      const minZ = wall.minZ - PLAYER_RADIUS;
-      const maxZ = wall.maxZ + PLAYER_RADIUS;
-      if (state.pos.z > minZ && state.pos.z < maxZ) {
-        state.pos.z = dz > 0 ? (minZ - COLLISION_SKIN) : (maxZ + COLLISION_SKIN);
-      }
+  let remainingX = dx;
+  let remainingZ = dz;
+
+  for (let i = 0; i < COLLISION_MAX_SLIDES; i++) {
+    const travel = Math.hypot(remainingX, remainingZ);
+    if (travel <= COLLISION_AXIS_EPS) break;
+
+    const hit = findEarliestCollision(state.pos.x, state.pos.z, remainingX, remainingZ);
+
+    if (!hit) {
+      state.pos.x += remainingX;
+      state.pos.z += remainingZ;
+      break;
     }
+
+    const moveT = Math.max(0, hit.t - COLLISION_SWEEP_EPS);
+    state.pos.x += remainingX * moveT;
+    state.pos.z += remainingZ * moveT;
+
+    const remainderScale = Math.max(0, 1 - moveT);
+    let slideX = remainingX * remainderScale;
+    let slideZ = remainingZ * remainderScale;
+
+    const intoWall = slideX * hit.normalX + slideZ * hit.normalZ;
+    if (intoWall < 0) {
+      slideX -= hit.normalX * intoWall;
+      slideZ -= hit.normalZ * intoWall;
+    }
+
+    state.pos.x += hit.normalX * COLLISION_SKIN;
+    state.pos.z += hit.normalZ * COLLISION_SKIN;
+
+    remainingX = slideX;
+    remainingZ = slideZ;
   }
 
   state.pos.x = THREE.MathUtils.clamp(state.pos.x, -WORLD_LIMIT + PLAYER_RADIUS, WORLD_LIMIT - PLAYER_RADIUS);
   state.pos.z = THREE.MathUtils.clamp(state.pos.z, -WORLD_LIMIT + PLAYER_RADIUS, WORLD_LIMIT - PLAYER_RADIUS);
-}
 
-function movePlayerWithCollisions(dx, dz) {
-  const travel = Math.hypot(dx, dz);
-  const steps = Math.max(1, Math.ceil(travel / COLLISION_STEP_MAX));
-  const stepX = dx / steps;
-  const stepZ = dz / steps;
-
-  for (let i = 0; i < steps; i++) {
-    movePlayerHorizontal(stepX, stepZ);
-  }
+  resolveCollidersOverlap();
 }
 
 function setHudPhaseVisuals() {
