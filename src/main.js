@@ -46,6 +46,9 @@ const $btnCalib = document.getElementById('btnCalib');
 const $btnRecalib = document.getElementById('btnRecalib');
 const $calibReadout = document.getElementById('calibReadout');
 const $btnRestart = document.getElementById('btnRestart');
+const $btnSettings = document.getElementById('btnSettings');
+const $btnCloseSettings = document.getElementById('btnCloseSettings');
+const $settingsPanel = document.getElementById('settingsPanel');
 const $extractIndicator = document.getElementById('extractIndicator');
 const $extractArrow = document.getElementById('extractArrow');
 const $extractLabel = document.getElementById('extractLabel');
@@ -351,11 +354,36 @@ function setInputDebugEnabled(enabled) {
 function applyConfigButtonsVisibility() {
   if (!isTouch || !REDUCE_CONFIG_BUTTONS) return;
 
-  // Keep only essential controls on mobile to reduce clutter.
-  if ($btnLook) $btnLook.style.display = 'none';
-  if ($btnInvX) $btnInvX.style.display = 'none';
-  if ($btnInvY) $btnInvY.style.display = 'none';
-  if ($btnCalib) $btnCalib.style.display = 'none';
+  // Inside settings, keep advanced controls available.
+  if ($btnLook) $btnLook.style.display = '';
+  if ($btnInvX) $btnInvX.style.display = '';
+  if ($btnInvY) $btnInvY.style.display = '';
+  if ($btnCalib) $btnCalib.style.display = '';
+}
+
+function initSettingsMenu() {
+  if (!$settingsPanel) return;
+
+  const close = () => { $settingsPanel.style.display = 'none'; };
+  const open = () => { $settingsPanel.style.display = 'block'; };
+
+  if ($btnSettings) {
+    $btnSettings.addEventListener('click', (e) => {
+      e.preventDefault();
+      open();
+    });
+  }
+
+  if ($btnCloseSettings) {
+    $btnCloseSettings.addEventListener('click', (e) => {
+      e.preventDefault();
+      close();
+    });
+  }
+
+  addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') close();
+  });
 }
 
 const LOOK_PRESETS = [
@@ -871,6 +899,7 @@ initLookControl();
 initMoveAxisToggles();
 initCalibControl();
 applyConfigButtonsVisibility();
+initSettingsMenu();
 addEventListener('click', () => { if (isTouch) { $tip && ($tip.style.display = 'none'); } });
 addEventListener('touchstart', () => { $tip && ($tip.style.display = 'none'); ensureAudio(); }, { passive: true });
 

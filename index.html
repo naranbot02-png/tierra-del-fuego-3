@@ -185,20 +185,30 @@
         <span id="missionMiniLabel">Inicio en 3s</span>
         <div id="missionMiniBar"><div id="missionMiniFill"></div></div>
       </div>
+      <button id="btnSettings" type="button" style="margin-top:8px;border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.35);color:#fff;border-radius:999px;padding:4px 10px;font-size:12px;">⚙ Configuración</button>
+      <div id="calibReadout" class="k" style="margin-top:6px;display:none;">CALIB</div>
+    </div>
+
+    <div id="settingsPanel" style="position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:26;width:min(92vw,640px);max-height:78vh;overflow:auto;border:1px solid rgba(255,255,255,.18);border-radius:14px;background:rgba(2,6,23,.92);backdrop-filter:blur(8px);padding:14px;display:none;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#e5e7eb;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <strong style="font-size:16px;">Configuración</strong>
+        <button id="btnCloseSettings" type="button" style="border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.35);color:#fff;border-radius:999px;padding:4px 10px;font-size:12px;">Cerrar</button>
+      </div>
+
       <div class="k" style="margin-top:6px">
         Desktop: click to lock pointer · Move WASD · Jump Space · Shoot Click · Restart R
         <br/>Mobile: dual-stick (mano configurable) · FIRE / J · ↻ · alerta crítica visual/háptica
       </div>
-      <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
-        <button id="btnLayout" type="button" style="border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.35);color:#fff;border-radius:999px;padding:4px 10px;font-size:12px;">Layout: Cómodo</button>
-        <button id="btnHand" type="button" style="border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.35);color:#fff;border-radius:999px;padding:4px 10px;font-size:12px;">Mano: Derecha</button>
-        <button id="btnLook" type="button" style="border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.35);color:#fff;border-radius:999px;padding:4px 10px;font-size:12px;">Mira: Normal</button>
-        <button id="btnInvX" type="button" style="border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.35);color:#fff;border-radius:999px;padding:4px 10px;font-size:12px;">Move X: Normal</button>
-        <button id="btnInvY" type="button" style="border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.35);color:#fff;border-radius:999px;padding:4px 10px;font-size:12px;">Move Y: Normal</button>
-        <button id="btnCalib" type="button" style="border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.35);color:#fff;border-radius:999px;padding:4px 10px;font-size:12px;">Calib: Off</button>
-        <button id="btnRecalib" type="button" style="border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.35);color:#fff;border-radius:999px;padding:4px 10px;font-size:12px;">Recalibrar</button>
+
+      <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;">
+        <button id="btnLayout" type="button" style="border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.35);color:#fff;border-radius:999px;padding:6px 10px;font-size:12px;">Layout: Cómodo</button>
+        <button id="btnHand" type="button" style="border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.35);color:#fff;border-radius:999px;padding:6px 10px;font-size:12px;">Mano: Derecha</button>
+        <button id="btnLook" type="button" style="border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.35);color:#fff;border-radius:999px;padding:6px 10px;font-size:12px;">Mira: Normal</button>
+        <button id="btnInvX" type="button" style="border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.35);color:#fff;border-radius:999px;padding:6px 10px;font-size:12px;">Move X: Normal</button>
+        <button id="btnInvY" type="button" style="border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.35);color:#fff;border-radius:999px;padding:6px 10px;font-size:12px;">Move Y: Normal</button>
+        <button id="btnCalib" type="button" style="border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.35);color:#fff;border-radius:999px;padding:6px 10px;font-size:12px;">Calib: Off</button>
+        <button id="btnRecalib" type="button" style="border:1px solid rgba(255,255,255,.2);background:rgba(0,0,0,.35);color:#fff;border-radius:999px;padding:6px 10px;font-size:12px;">Recalibrar</button>
       </div>
-      <div id="calibReadout" class="k" style="margin-top:6px;display:none;">CALIB</div>
     </div>
 
     <div id="tip">Tierra del Fuego 3 — Click to start (desktop) / Tap to play (mobile)</div>
