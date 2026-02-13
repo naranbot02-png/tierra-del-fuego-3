@@ -910,12 +910,32 @@ document.body.appendChild(damageOverlay);
 const enemies = [];
 const enemyMat = new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.55, metalness: 0.25, emissive: 0x220808, emissiveIntensity: 0.35 });
 
-const ZONE_WAVE_LAYOUTS = [
-  [[-20, -4], [-6, -8], [8, -2]],      // perímetro
-  [[-2, 6], [10, 12], [-12, 10]],       // núcleo
-  [[6, 18], [-8, 20], [2, 24]],         // corredor/faro
+const WAVE_CONFIGS = [
+  {
+    name: 'perímetro',
+    delay: 0,
+    moveMul: 1.0,
+    damageMul: 1.0,
+    spawns: [[-20, -4], [-6, -8], [8, -2]],
+  },
+  {
+    name: 'núcleo',
+    delay: 1.2,
+    moveMul: 1.08,
+    damageMul: 1.0,
+    spawns: [[-2, 6], [10, 12], [-12, 10]],
+  },
+  {
+    name: 'corredor faro',
+    delay: 1.8,
+    moveMul: 1.2,
+    damageMul: 1.12,
+    spawns: [[10, 16], [6, 20], [2, 24]],
+  },
 ];
 let currentWaveIndex = 0;
+let pendingWaveIndex = null;
+let pendingWaveDelay = 0;
 
 function spawnEnemy(x,z){
   const body = new THREE.Mesh(new THREE.SphereGeometry(0.45, 18, 12), enemyMat);
@@ -924,15 +944,16 @@ function spawnEnemy(x,z){
   eye.position.set(0, 0.05, 0.42);
   body.add(eye);
   scene.add(body);
-  enemies.push({ mesh: body, hp: 3, dead: false, base: new THREE.Vector3(x,1.4,z), spawn: new THREE.Vector3(x,1.4,z), t: Math.random()*10, hitCd: 0 });
+  enemies.push({ mesh: body, hp: 3, dead: false, base: new THREE.Vector3(x,1.4,z), spawn: new THREE.Vector3(x,1.4,z), t: Math.random()*10, hitCd: 0, waveMoveMul: 1, waveDamageMul: 1 });
 }
 spawnEnemy(4, -2);
 spawnEnemy(-6, -8);
 spawnEnemy(6, 8);
-mission.targetKills = enemies.length * ZONE_WAVE_LAYOUTS.length;
+mission.targetKills = enemies.length * WAVE_CONFIGS.length;
 
 function deployWave(waveIndex) {
-  const layout = ZONE_WAVE_LAYOUTS[Math.min(waveIndex, ZONE_WAVE_LAYOUTS.length - 1)];
+  const cfg = WAVE_CONFIGS[Math.min(waveIndex, WAVE_CONFIGS.length - 1)];
+  const layout = cfg.spawns;
   for (let i = 0; i < enemies.length; i++) {
     const e = enemies[i];
     const [x, z] = layout[i % layout.length];
@@ -940,6 +961,8 @@ function deployWave(waveIndex) {
     e.dead = false;
     e.t = Math.random() * 10;
     e.hitCd = 0;
+    e.waveMoveMul = cfg.moveMul;
+    e.waveDamageMul = cfg.damageMul;
     e.spawn.set(x, 1.4, z);
     e.base.set(x, 1.4, z);
     e.mesh.scale.setScalar(1);
@@ -949,6 +972,8 @@ function deployWave(waveIndex) {
 
 function resetEnemies() {
   currentWaveIndex = 0;
+  pendingWaveIndex = null;
+  pendingWaveDelay = 0;
   deployWave(currentWaveIndex);
 }
 
@@ -959,7 +984,7 @@ function updateEnemies(dt, now){
   for (const e of enemies){
     if (e.hp <= 0) continue;
     aliveCount += 1;
-    e.t += dt * threat.moveMul;
+    e.t += dt * threat.moveMul * (e.waveMoveMul || 1);
     e.hitCd = Math.max(0, e.hitCd - dt);
     e.mesh.position.x = e.base.x + Math.sin(e.t*0.8)*1.3;
     e.mesh.position.z = e.base.z + Math.cos(e.t*0.7)*1.3;
@@ -968,7 +993,8 @@ function updateEnemies(dt, now){
     const dist = e.mesh.position.distanceTo(state.pos);
     const globalHurtReady = (now - lastDamageAt) >= PLAYER_HURT_IFRAME_MS;
     if (dist < 1.9 && e.hitCd <= 0 && globalHurtReady && mission.phase === 'playing') {
-      state.hp = Math.max(0, state.hp - threat.damage);
+      const waveDamage = Math.round(threat.damage * (e.waveDamageMul || 1));
+      state.hp = Math.max(0, state.hp - waveDamage);
       e.hitCd = threat.hitCooldown;
       lastDamageAt = now;
       sfxDamage();
@@ -976,15 +1002,27 @@ function updateEnemies(dt, now){
     }
   }
 
-  const hasNextWave = currentWaveIndex < (ZONE_WAVE_LAYOUTS.length - 1);
-  if (mission.phase === 'playing' && aliveCount === 0 && hasNextWave && mission.kills < mission.targetKills) {
-    currentWaveIndex += 1;
-    deployWave(currentWaveIndex);
+  const hasNextWave = currentWaveIndex < (WAVE_CONFIGS.length - 1);
+  if (mission.phase === 'playing' && aliveCount === 0 && hasNextWave && pendingWaveIndex == null && mission.kills < mission.targetKills) {
+    pendingWaveIndex = currentWaveIndex + 1;
+    pendingWaveDelay = WAVE_CONFIGS[pendingWaveIndex].delay;
     if ($tip) {
-      const zoneName = currentWaveIndex === 1 ? 'núcleo' : 'corredor faro';
       $tip.style.display = 'block';
-      $tip.textContent = `Nueva oleada detectada en ${zoneName}.`;
-      if (isTouch) setTimeout(() => { if (mission.phase === 'playing') $tip.style.display = 'none'; }, 900);
+      $tip.textContent = `Reagrupando drones… próxima oleada en ${pendingWaveDelay.toFixed(1)}s`;
+    }
+  }
+
+  if (pendingWaveIndex != null && mission.phase === 'playing') {
+    pendingWaveDelay = Math.max(0, pendingWaveDelay - dt);
+    if (pendingWaveDelay <= 0) {
+      currentWaveIndex = pendingWaveIndex;
+      pendingWaveIndex = null;
+      deployWave(currentWaveIndex);
+      if ($tip) {
+        $tip.style.display = 'block';
+        $tip.textContent = `Nueva oleada: ${WAVE_CONFIGS[currentWaveIndex].name}.`;
+        if (isTouch) setTimeout(() => { if (mission.phase === 'playing') $tip.style.display = 'none'; }, 900);
+      }
     }
   }
 }
@@ -1357,7 +1395,9 @@ function updateBeaconState(now) {
   const pulse = 0.5 + Math.sin(now * 0.0075) * 0.5;
   const baseGlow = 1.35 + pulse * 0.2;
 
-  const guideTargetIntensity = (mission.phase === 'playing' && mission.extractionReady) ? (0.65 + pulse * 0.7) : 0.14;
+  const guideTargetIntensity = (mission.phase === 'playing' && mission.extractionReady)
+    ? (0.65 + pulse * 0.7)
+    : ((mission.phase === 'playing' && pendingWaveIndex != null) ? (0.34 + pulse * 0.25) : 0.14);
   for (const g of objectiveGuideLights) g.intensity = guideTargetIntensity;
 
   if (mission.phase === 'playing' && mission.extractionReady) {
