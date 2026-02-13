@@ -51,6 +51,7 @@ const $extractArrow = document.getElementById('extractArrow');
 const $extractLabel = document.getElementById('extractLabel');
 
 const isTouch = matchMedia('(pointer: coarse)').matches;
+const REDUCE_CONFIG_BUTTONS = true;
 const MOBILE_MAX_DPR = 1.25; // perf guard for webviews/phones
 const DESKTOP_MAX_DPR = 2;
 
@@ -345,6 +346,16 @@ function setInputDebugEnabled(enabled) {
     }
   }
   if (!enabled) console.info('[input-debug] off');
+}
+
+function applyConfigButtonsVisibility() {
+  if (!isTouch || !REDUCE_CONFIG_BUTTONS) return;
+
+  // Keep only essential controls on mobile to reduce clutter.
+  if ($btnLook) $btnLook.style.display = 'none';
+  if ($btnInvX) $btnInvX.style.display = 'none';
+  if ($btnInvY) $btnInvY.style.display = 'none';
+  if ($btnCalib) $btnCalib.style.display = 'none';
 }
 
 const LOOK_PRESETS = [
@@ -859,6 +870,7 @@ initHandControl();
 initLookControl();
 initMoveAxisToggles();
 initCalibControl();
+applyConfigButtonsVisibility();
 addEventListener('click', () => { if (isTouch) { $tip && ($tip.style.display = 'none'); } });
 addEventListener('touchstart', () => { $tip && ($tip.style.display = 'none'); ensureAudio(); }, { passive: true });
 
