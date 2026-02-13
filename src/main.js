@@ -1196,6 +1196,8 @@ function updateExtractionIndicator() {
     $extractIndicator.classList.add('extract-locked');
     $extractArrow.textContent = '✓';
     $extractArrow.style.transform = 'translateY(-1px) rotate(0deg)';
+    $extractArrow.style.color = '#22d3ee';
+    $extractLabel.style.color = '#e2e8f0';
     $extractLabel.textContent = `En faro ${pct}%`;
     return;
   }
@@ -1209,6 +1211,17 @@ function updateExtractionIndicator() {
 
   $extractArrow.textContent = '▲';
   $extractArrow.style.transform = `translateY(-1px) rotate(${rotationDeg.toFixed(1)}deg)`;
+
+  if (distance > 40) {
+    $extractArrow.style.color = '#f59e0b';
+    $extractLabel.style.color = '#fbbf24';
+  } else if (distance > 15) {
+    $extractArrow.style.color = '#22d3ee';
+    $extractLabel.style.color = '#67e8f9';
+  } else {
+    $extractArrow.style.color = '#4ade80';
+    $extractLabel.style.color = '#86efac';
+  }
 
   const graceLeft = Math.max(0, mission.extractionOutGraceLeft);
   const inGrace = mission.extractionProgress > 0 && graceLeft > 0;
