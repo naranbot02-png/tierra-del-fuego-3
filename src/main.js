@@ -1293,14 +1293,18 @@ function tick(){
   if (wantShoot) doShoot(now);
 
   recoilKick = Math.max(0, recoilKick - dt * 0.22);
-  camera.rotation.x -= recoilKick;
+  let visualPitchOffset = -recoilKick;
+  let visualYawOffset = 0;
 
   if (now < shakeUntil) {
     const k = (shakeUntil - now) / 90;
     const amp = isTouch ? 0.010 : 0.018;
-    // Hotfix: no desviar yaw visual para mantener coherencia entre dirección vista e intención de movimiento.
-    camera.rotation.x += (Math.random() - 0.5) * amp * k;
+    // Shake solo visual: nunca altera state.yaw (basis de movimiento).
+    visualPitchOffset += (Math.random() - 0.5) * amp * k;
+    visualYawOffset += (Math.random() - 0.5) * amp * 0.35 * k;
   }
+
+  camera.rotation.set(state.pitch + visualPitchOffset, state.yaw + visualYawOffset, 0, 'YXZ');
 
   const shotPulse = now < shotPulseUntil;
   crosshair.material.color.set(shotPulse ? 0xf59e0b : 0xe5e7eb);

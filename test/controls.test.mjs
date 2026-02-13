@@ -37,9 +37,9 @@ test('intentToWorldDelta respeta yaw 0/90/180/270 para forward/back/strafe', () 
   const EPS = 1e-12;
   const cases = [
     { yaw: 0, fwd: [0, -1], back: [0, 1], left: [-1, 0], right: [1, 0] },
-    { yaw: Math.PI / 2, fwd: [1, 0], back: [-1, 0], left: [0, -1], right: [0, 1] },
+    { yaw: Math.PI / 2, fwd: [-1, 0], back: [1, 0], left: [0, 1], right: [0, -1] },
     { yaw: Math.PI, fwd: [0, 1], back: [0, -1], left: [1, 0], right: [-1, 0] },
-    { yaw: Math.PI * 1.5, fwd: [-1, 0], back: [1, 0], left: [0, 1], right: [0, -1] },
+    { yaw: Math.PI * 1.5, fwd: [1, 0], back: [-1, 0], left: [0, -1], right: [0, 1] },
   ];
 
   for (const c of cases) {
@@ -53,4 +53,13 @@ test('intentToWorldDelta respeta yaw 0/90/180/270 para forward/back/strafe', () 
     assert.ok(Math.abs(left.worldX - c.left[0]) < EPS && Math.abs(left.worldZ - c.left[1]) < EPS);
     assert.ok(Math.abs(right.worldX - c.right[0]) < EPS && Math.abs(right.worldZ - c.right[1]) < EPS);
   }
+});
+
+test('si cambia yaw entre frames, forward sigue la nueva dirección de cámara', () => {
+  const frame1 = intentToWorldDelta({ state: { yaw: 0 }, intentX: 0, intentY: 1, dt: 1, speed: 1 });
+  const frame2 = intentToWorldDelta({ state: { yaw: Math.PI / 2 }, intentX: 0, intentY: 1, dt: 1, speed: 1 });
+
+  assert.deepEqual({ x: frame1.worldX, z: frame1.worldZ }, { x: 0, z: -1 });
+  assert.ok(Math.abs(frame2.worldX - (-1)) < 1e-12);
+  assert.ok(Math.abs(frame2.worldZ - 0) < 1e-12);
 });
