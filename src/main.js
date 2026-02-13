@@ -1130,8 +1130,8 @@ function tick(){
   if (now < shakeUntil) {
     const k = (shakeUntil - now) / 90;
     const amp = isTouch ? 0.010 : 0.018;
+    // Hotfix: no desviar yaw visual para mantener coherencia entre dirección vista e intención de movimiento.
     camera.rotation.x += (Math.random() - 0.5) * amp * k;
-    camera.rotation.y += (Math.random() - 0.5) * amp * k;
   }
 
   const shotPulse = now < shotPulseUntil;
