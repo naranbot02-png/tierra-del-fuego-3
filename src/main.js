@@ -227,12 +227,24 @@ addBox(22, 1.0, 6, 3.2, 2.0, 1.2, darkPanelMat, { solid: true, colliderTag: 'cov
 // Ruta riesgo/recompensa: rápida (expuesta) vs segura (coberturas)
 const fastRouteMat = new THREE.MeshBasicMaterial({ color: 0xf97316, map: txBrickFloor003, transparent: true, opacity: 0.18 });
 const safeRouteMat = new THREE.MeshBasicMaterial({ color: 0x4ade80, map: txBrickWall12, transparent: true, opacity: 0.16 });
+
+const fastRoutePosts = [];
+const safeRoutePosts = [];
+function addRoutePost(x, z, type = 'fast') {
+  const mat = type === 'fast' ? hazardMat : darkPanelMat;
+  const post = addBox(x, 0.8, z, 0.28, 1.6, 0.28, mat);
+  (type === 'fast' ? fastRoutePosts : safeRoutePosts).push(post);
+}
+
 addBox(8, 0.035, 10, 24, 0.07, 1.5, fastRouteMat);      // rápida y expuesta hacia faro
 addBox(-14, 0.035, 10, 10, 0.07, 1.5, safeRouteMat);    // segura (más larga)
 addBox(-18, 0.035, 16, 8, 0.07, 1.5, safeRouteMat);
 addBox(-10, 0.035, 22, 10, 0.07, 1.5, safeRouteMat);
 addBox(-16, 1.0, 12, 2.6, 2.0, 1.1, darkPanelMat, { solid: true, colliderTag: 'cover' });
 addBox(-12, 1.0, 18, 2.6, 2.0, 1.1, darkPanelMat, { solid: true, colliderTag: 'cover' });
+
+for (const [x, z] of [[-2, 10], [4, 10], [10, 10], [16, 10], [20, 10]]) addRoutePost(x, z, 'fast');
+for (const [x, z] of [[-18, 10], [-18, 16], [-14, 22], [-10, 22]]) addRoutePost(x, z, 'safe');
 
 addBox(
   0,
@@ -1830,6 +1842,16 @@ function updateBeaconState(now) {
     ? (0.65 + pulse * 0.7)
     : ((mission.phase === 'playing' && pendingWaveIndex != null) ? (0.34 + pulse * 0.25) : 0.14);
   for (const g of objectiveGuideLights) g.intensity = guideTargetIntensity;
+
+  const routePulse = 0.45 + Math.sin(now * 0.006) * 0.35;
+  for (const p of fastRoutePosts) {
+    p.material.emissive.setHex(0x3f1a08);
+    p.material.emissiveIntensity = 0.14 + routePulse * 0.26;
+  }
+  for (const p of safeRoutePosts) {
+    p.material.emissive.setHex(0x08200f);
+    p.material.emissiveIntensity = 0.08 + routePulse * 0.14;
+  }
 
   if (mission.phase === 'playing' && mission.extractionReady) {
     const p = THREE.MathUtils.clamp(mission.extractionProgress / mission.extractionDuration, 0, 1);
