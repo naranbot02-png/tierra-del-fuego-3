@@ -387,6 +387,91 @@ function sfxLose() {
   setTimeout(() => beep({ freq: 220, duration: 0.11, type: 'sawtooth', gain: 0.03 }), 75);
 }
 
+// --- Tactical audio layers (calm / pressure / extract)
+const tacticalAudio = {
+  init: false,
+  master: null,
+  calm: null,
+  pressure: null,
+  extract: null,
+  calmGain: null,
+  pressureGain: null,
+  extractGain: null,
+};
+
+function initTacticalAudio() {
+  if (tacticalAudio.init) return true;
+  const ctx = ensureAudio();
+  if (!ctx) return false;
+
+  const master = ctx.createGain();
+  master.gain.value = isTouch ? 0.18 : 0.22;
+  master.connect(ctx.destination);
+
+  const makeLayer = (freq, type = 'sine') => {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type;
+    osc.frequency.value = freq;
+    gain.gain.value = 0.0001;
+    osc.connect(gain);
+    gain.connect(master);
+    osc.start();
+    return { osc, gain };
+  };
+
+  const calm = makeLayer(92, 'sine');
+  const pressure = makeLayer(148, 'triangle');
+  const extract = makeLayer(260, 'sine');
+
+  tacticalAudio.master = master;
+  tacticalAudio.calm = calm.osc;
+  tacticalAudio.pressure = pressure.osc;
+  tacticalAudio.extract = extract.osc;
+  tacticalAudio.calmGain = calm.gain;
+  tacticalAudio.pressureGain = pressure.gain;
+  tacticalAudio.extractGain = extract.gain;
+  tacticalAudio.init = true;
+  return true;
+}
+
+function setLayerGain(gainNode, value, dt) {
+  if (!gainNode || !audioCtx) return;
+  const t = audioCtx.currentTime;
+  const smooth = Math.max(0.03, Math.min(0.18, dt * 2.2));
+  gainNode.gain.cancelScheduledValues(t);
+  gainNode.gain.linearRampToValueAtTime(Math.max(0.0001, value), t + smooth);
+}
+
+function updateTacticalAudio(dt) {
+  if (!initTacticalAudio()) return;
+
+  let calmTarget = 0.0001;
+  let pressureTarget = 0.0001;
+  let extractTarget = 0.0001;
+
+  if (mission.phase === 'playing') {
+    if (mission.extractionReady) {
+      extractTarget = mission.extractionInside ? 0.028 : 0.022;
+      pressureTarget = director.mode === 'pressure' ? 0.012 : 0.007;
+      calmTarget = 0.003;
+    } else if (director.mode === 'pressure') {
+      pressureTarget = 0.022;
+      calmTarget = 0.004;
+    } else if (director.mode === 'calm') {
+      calmTarget = 0.016;
+      pressureTarget = 0.003;
+    } else {
+      calmTarget = 0.01;
+      pressureTarget = 0.009;
+    }
+  }
+
+  setLayerGain(tacticalAudio.calmGain, calmTarget, dt);
+  setLayerGain(tacticalAudio.pressureGain, pressureTarget, dt);
+  setLayerGain(tacticalAudio.extractGain, extractTarget, dt);
+}
+
 addEventListener('keydown', (e) => {
   keys.add(e.code);
   if (e.code === 'KeyR') {
@@ -1872,6 +1957,7 @@ function tick(){
 
   updateEnemies(dt, now);
   updateMission(dt);
+  updateTacticalAudio(dt);
   updateBeaconState(now);
   updateExtractionIndicator();
 
