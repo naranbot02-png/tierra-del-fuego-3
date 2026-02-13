@@ -85,6 +85,8 @@ export function stepMissionCore({ mission, feedbackFlags, dt, playerHp, insideEx
     }
 
     if (!wasInside && mission.extractionInside) {
+      // Al reingresar, rearmamos la alerta para una próxima salida crítica.
+      feedbackFlags.warnedGraceCritical = false;
       events.push({ type: 'extraction-entered' });
     }
 

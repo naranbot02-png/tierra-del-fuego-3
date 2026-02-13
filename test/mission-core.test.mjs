@@ -54,6 +54,24 @@ test('hold/grace: alerta crítica antes de expirar y luego decae progreso', () =
   assert.ok(criticalStep.events.some((e) => e.type === 'extraction-grace-critical'));
   assert.ok(!criticalStep.events.some((e) => e.type === 'extraction-grace-expired'));
 
+  const reenterStep = stepMissionCore({
+    mission,
+    feedbackFlags,
+    dt: 0.01,
+    playerHp: 100,
+    insideExtractionZone: true,
+  });
+  assert.ok(reenterStep.events.some((e) => e.type === 'extraction-entered'));
+
+  const criticalAgain = stepMissionCore({
+    mission,
+    feedbackFlags,
+    dt: 0.45,
+    playerHp: 100,
+    insideExtractionZone: false,
+  });
+  assert.ok(criticalAgain.events.some((e) => e.type === 'extraction-grace-critical'));
+
   const expiredStep = stepMissionCore({
     mission,
     feedbackFlags,
