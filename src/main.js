@@ -1675,6 +1675,7 @@ function updateMission(dt){
     currentWaveIndex,
     totalWaves: WAVE_CONFIGS.length,
     currentWaveName: WAVE_CONFIGS[Math.min(currentWaveIndex, WAVE_CONFIGS.length - 1)]?.name || 'oleada',
+    directorMode: director.mode,
     sprinting: movementTelemetry.sprinting,
     refs: {
       missionStatusEl: $missionStatus,

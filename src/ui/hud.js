@@ -48,7 +48,7 @@ export function updateMissionMini({ mission, refs }) {
   missionMiniFillEl.style.width = `${Math.round(clamp01(progress) * 100)}%`;
 }
 
-export function renderHudText({ mission, hp, isTouch, threat, extractionDistance = 0, pendingWaveDelay = 0, pendingWaveActive = false, currentWaveIndex = 0, totalWaves = 1, currentWaveName = 'oleada', sprinting = false, refs }) {
+export function renderHudText({ mission, hp, isTouch, threat, extractionDistance = 0, pendingWaveDelay = 0, pendingWaveActive = false, currentWaveIndex = 0, totalWaves = 1, currentWaveName = 'oleada', directorMode = 'normal', sprinting = false, refs }) {
   const { missionStatusEl, missionObjectiveEl, missionTimerEl, hpEl } = refs;
   const extractionPct = Math.round((mission.extractionProgress / mission.extractionDuration) * 100);
   const mobileCopy = isTouch;
@@ -63,7 +63,10 @@ export function renderHudText({ mission, hp, isTouch, threat, extractionDistance
         missionStatusEl.textContent = mission.extractionInside ? 'Extrayendo' : 'Evacuación';
       } else {
         const waveTag = `${currentWaveIndex + 1}/${totalWaves}`;
-        missionStatusEl.textContent = isTouch ? `Oleada ${waveTag}` : `Oleada ${waveTag} · ${currentWaveName}`;
+        const directorTag = directorMode === 'pressure' ? '↑' : (directorMode === 'calm' ? '↓' : '·');
+        missionStatusEl.textContent = isTouch
+          ? `Oleada ${waveTag} ${directorTag}`
+          : `Oleada ${waveTag} · ${currentWaveName} · dir ${directorMode}`;
       }
     } else {
       missionStatusEl.textContent = mission.result === 'win' ? 'Completada' : 'Fallida';
