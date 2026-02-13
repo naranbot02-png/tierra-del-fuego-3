@@ -10,6 +10,7 @@ import {
   isTouchAutoSprinting,
 } from './input/intent.js';
 import { resolveCalibrationResult } from './input/calibration.js';
+import { shouldAutoRunCalibration } from './input/control-lock.js';
 import { intentToWorldDelta } from './movement/transform.js';
 import {
   createMissionState,
@@ -44,6 +45,7 @@ const $btnInvX = document.getElementById('btnInvX');
 const $btnInvY = document.getElementById('btnInvY');
 const $btnCalib = document.getElementById('btnCalib');
 const $btnRecalib = document.getElementById('btnRecalib');
+const $btnLockCtrl = document.getElementById('btnLockCtrl');
 const $calibReadout = document.getElementById('calibReadout');
 const $btnRestart = document.getElementById('btnRestart');
 const $btnSettings = document.getElementById('btnSettings');
@@ -140,6 +142,31 @@ addWall(8, 1.2, 9, 1.0, 2.4, 14, metalMat);
 addWall(-10, 1.2, 13, 18, 2.4, 1.0, metalMat);
 addWall(-18, 1.2, 2, 1.0, 2.4, 28, metalMat);
 addWall(10, 1.2, -6, 28, 2.4, 1.0, metalMat);
+
+// --- Main map blockout v1: perímetro + núcleo + corredor al faro
+addWall(0, 1.2, -30, 62, 2.4, 1.0, metalMat); // perímetro sur
+addWall(0, 1.2, 32, 62, 2.4, 1.0, metalMat); // perímetro norte
+addWall(-31, 1.2, 1, 1.0, 2.4, 62, metalMat); // perímetro oeste
+addWall(31, 1.2, 1, 1.0, 2.4, 62, metalMat); // perímetro este
+
+const zonePerimeter = new THREE.Mesh(
+  new THREE.RingGeometry(22, 30, 56),
+  new THREE.MeshBasicMaterial({ color: 0x1d4ed8, transparent: true, opacity: 0.08, side: THREE.DoubleSide })
+);
+zonePerimeter.rotation.x = -Math.PI / 2;
+zonePerimeter.position.set(0, 0.02, 1);
+scene.add(zonePerimeter);
+
+const zoneCore = new THREE.Mesh(
+  new THREE.CircleGeometry(9, 32),
+  new THREE.MeshBasicMaterial({ color: 0x22c55e, transparent: true, opacity: 0.10, side: THREE.DoubleSide })
+);
+zoneCore.rotation.x = -Math.PI / 2;
+zoneCore.position.set(-2, 0.03, 4);
+scene.add(zoneCore);
+
+addWall(-6, 0.8, 16, 12, 1.6, 0.8, metalMat); // cuello ruta norte
+addWall(10, 0.8, 20, 8, 1.6, 0.8, metalMat); // lateral ruta faro
 
 addBox(
   0,
@@ -319,6 +346,7 @@ const inputDebug = {
 const moveAxisSettings = {
   invertX: false,
   invertY: false,
+  lockStable: true,
 };
 
 const movementTelemetry = {
@@ -464,8 +492,21 @@ function initLookControl() {
 }
 
 function updateMoveAxisButtons() {
-  if ($btnInvX) $btnInvX.textContent = `Move X: ${moveAxisSettings.invertX ? 'Invertido' : 'Normal'}`;
-  if ($btnInvY) $btnInvY.textContent = `Move Y: ${moveAxisSettings.invertY ? 'Invertido' : 'Normal'}`;
+  if ($btnInvX) {
+    $btnInvX.textContent = `Move X: ${moveAxisSettings.invertX ? 'Invertido' : 'Normal'}`;
+    $btnInvX.disabled = moveAxisSettings.lockStable;
+    $btnInvX.style.opacity = moveAxisSettings.lockStable ? '0.6' : '1';
+  }
+  if ($btnInvY) {
+    $btnInvY.textContent = `Move Y: ${moveAxisSettings.invertY ? 'Invertido' : 'Normal'}`;
+    $btnInvY.disabled = moveAxisSettings.lockStable;
+    $btnInvY.style.opacity = moveAxisSettings.lockStable ? '0.6' : '1';
+  }
+  if ($btnRecalib) {
+    $btnRecalib.disabled = moveAxisSettings.lockStable;
+    $btnRecalib.style.opacity = moveAxisSettings.lockStable ? '0.6' : '1';
+  }
+  if ($btnLockCtrl) $btnLockCtrl.textContent = `Controles: ${moveAxisSettings.lockStable ? 'Bloq' : 'Libre'}`;
 }
 
 function initMoveAxisToggles() {
@@ -474,12 +515,15 @@ function initMoveAxisToggles() {
     moveAxisSettings.invertX = localStorage.getItem('tdf3_move_invert_x') === '1';
     moveAxisSettings.invertY = localStorage.getItem('tdf3_move_invert_y') === '1';
     calibrated = localStorage.getItem('tdf3_move_calibrated') === '1';
+    const lockSaved = localStorage.getItem('tdf3_controls_lock');
+    moveAxisSettings.lockStable = lockSaved == null ? true : lockSaved === '1';
   } catch {}
   updateMoveAxisButtons();
 
   if ($btnInvX) {
     $btnInvX.addEventListener('click', (e) => {
       e.preventDefault();
+      if (moveAxisSettings.lockStable) return;
       moveAxisSettings.invertX = !moveAxisSettings.invertX;
       try { localStorage.setItem('tdf3_move_invert_x', moveAxisSettings.invertX ? '1' : '0'); } catch {}
       updateMoveAxisButtons();
@@ -489,18 +533,36 @@ function initMoveAxisToggles() {
   if ($btnInvY) {
     $btnInvY.addEventListener('click', (e) => {
       e.preventDefault();
+      if (moveAxisSettings.lockStable) return;
       moveAxisSettings.invertY = !moveAxisSettings.invertY;
       try { localStorage.setItem('tdf3_move_invert_y', moveAxisSettings.invertY ? '1' : '0'); } catch {}
       updateMoveAxisButtons();
     });
   }
 
-  if (isTouch && !calibrated) {
+  if ($btnLockCtrl) {
+    $btnLockCtrl.addEventListener('click', (e) => {
+      e.preventDefault();
+      moveAxisSettings.lockStable = !moveAxisSettings.lockStable;
+      try { localStorage.setItem('tdf3_controls_lock', moveAxisSettings.lockStable ? '1' : '0'); } catch {}
+      updateMoveAxisButtons();
+    });
+  }
+
+  if (shouldAutoRunCalibration({ isTouch, calibrated, lockStable: moveAxisSettings.lockStable })) {
     startCalibrationWizard();
   }
 }
 
 function startCalibrationWizard() {
+  if (moveAxisSettings.lockStable) {
+    if ($tip) {
+      $tip.style.display = 'block';
+      $tip.textContent = 'Desbloqueá controles para recalibrar.';
+    }
+    return;
+  }
+
   calibrationWizard.active = true;
   calibrationWizard.phase = 'y';
   calibrationWizard.phaseElapsed = 0;
