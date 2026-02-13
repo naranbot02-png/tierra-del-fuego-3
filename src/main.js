@@ -524,6 +524,7 @@ function maybeShowRunSummary() {
   const cause = mission.result === 'win' ? 'win' : (mission.lastLoseReason || 'unknown');
   const fastPct = Math.round((runTelemetry.routeFastTime / Math.max(0.01, runTelemetry.phaseTime.playing)) * 100);
   const safePct = Math.round((runTelemetry.routeSafeTime / Math.max(0.01, runTelemetry.phaseTime.playing)) * 100);
+  const dmgPerMin = Math.round((runTelemetry.damageReceived / Math.max(1, runTelemetry.phaseTime.playing)) * 60);
   const nextBonus = mission.result === 'lose' && mission.lastLoseReason === 'hp' ? 0.35 : 0;
   try { localStorage.setItem('tdf3_balance_wave_delay_bonus', String(nextBonus)); } catch {}
 
@@ -543,7 +544,7 @@ function maybeShowRunSummary() {
 
   $missionFeed.classList.remove('feed-warn', 'feed-danger', 'feed-good');
   $missionFeed.classList.add('show', mission.result === 'win' ? 'feed-good' : 'feed-warn');
-  $missionFeed.textContent = `Run: ${cause} · dmg ${Math.round(runTelemetry.damageReceived)} · director ${director.mode}/${director.modeChanges} · ruta rápida ${fastPct}% / segura ${safePct}% · tune d${tuning.density.toFixed(1)} Δ${tuning.delayMul.toFixed(1)} x${tuning.damageMul.toFixed(1)} · next delay+${nextBonus.toFixed(2)}s`;
+  $missionFeed.textContent = `Run: ${cause} · dmg ${Math.round(runTelemetry.damageReceived)} (${dmgPerMin}/min) · director ${director.mode}/${director.modeChanges} · ruta rápida ${fastPct}% / segura ${safePct}% · tune d${tuning.density.toFixed(1)} Δ${tuning.delayMul.toFixed(1)} x${tuning.damageMul.toFixed(1)} · next delay+${nextBonus.toFixed(2)}s`;
 }
 
 
