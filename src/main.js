@@ -118,6 +118,8 @@ const txBrickWall12 = loadTiledTexture('./assets/library/textures/brick_wall_12_
 const txBrickFloor003 = loadTiledTexture('./assets/library/textures/brick_floor_003_diff_1k.jpg', 8, 8, 2); // 8
 const txBrownFloorTiles = loadTiledTexture('./assets/library/textures/brown_floor_tiles_diff_1k.jpg', 6, 6, 2); // 9
 const txBlackPaintedPlanks = loadTiledTexture('./assets/library/textures/black_painted_planks_diff_1k.jpg', 4.8, 4.8, 2); // 10
+const txBlueFloorTiles = loadTiledTexture('./assets/library/textures/blue_floor_tiles_01_diff_1k.jpg', 3.2, 3.2, 2); // 11
+const txBeamWall = loadTiledTexture('./assets/library/textures/beam_wall_01_diff_1k.jpg', 2.8, 2.8, 2); // 12
 
 const groundMat = new THREE.MeshStandardMaterial({ color: 0xf3f7ff, map: txAsphalt, roughness: 0.93, metalness: 0.05 });
 const iceMat = new THREE.MeshStandardMaterial({ color: 0x8494a8, map: txBrushedConcrete, roughness: 0.84, metalness: 0.04 });
@@ -179,7 +181,7 @@ addWall(31, 1.2, 1, 1.0, 2.4, 62, metalMat); // perímetro este
 
 const zonePerimeter = new THREE.Mesh(
   new THREE.RingGeometry(22, 30, 56),
-  new THREE.MeshBasicMaterial({ color: 0x1d4ed8, transparent: true, opacity: 0.08, side: THREE.DoubleSide })
+  new THREE.MeshBasicMaterial({ color: 0x7dd3fc, map: txBeamWall, transparent: true, opacity: 0.1, side: THREE.DoubleSide })
 );
 zonePerimeter.rotation.x = -Math.PI / 2;
 zonePerimeter.position.set(0, 0.02, 1);
@@ -266,6 +268,7 @@ const extractionZone = new THREE.Mesh(
   new THREE.RingGeometry(EXTRACTION_RING_INNER_RADIUS, EXTRACTION_RING_OUTER_RADIUS, 56),
   new THREE.MeshBasicMaterial({
     color: 0x67e8f9,
+    map: txBlueFloorTiles,
     transparent: true,
     opacity: 0,
     side: THREE.DoubleSide,
