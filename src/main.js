@@ -9,6 +9,7 @@ import {
   isKeyboardSprinting,
   isTouchAutoSprinting,
 } from './input/intent.js';
+import { resolveCalibrationResult } from './input/calibration.js';
 import { intentToWorldDelta } from './movement/transform.js';
 import {
   createMissionState,
@@ -42,6 +43,7 @@ const $btnLook = document.getElementById('btnLook');
 const $btnInvX = document.getElementById('btnInvX');
 const $btnInvY = document.getElementById('btnInvY');
 const $btnCalib = document.getElementById('btnCalib');
+const $btnRecalib = document.getElementById('btnRecalib');
 const $calibReadout = document.getElementById('calibReadout');
 const $btnRestart = document.getElementById('btnRestart');
 const $extractIndicator = document.getElementById('extractIndicator');
@@ -309,6 +311,17 @@ const moveAxisSettings = {
   invertY: false,
 };
 
+const calibrationWizard = {
+  active: false,
+  phase: 'y',
+  phaseElapsed: 0,
+  sumX: 0,
+  sumY: 0,
+  countX: 0,
+  countY: 0,
+};
+const CALIB_PHASE_SECONDS = 1.5;
+
 function setInputDebugEnabled(enabled) {
   inputDebug.enabled = enabled;
   if ($btnCalib) $btnCalib.textContent = `Calib: ${enabled ? 'On' : 'Off'}`;
@@ -407,9 +420,11 @@ function updateMoveAxisButtons() {
 }
 
 function initMoveAxisToggles() {
+  let calibrated = false;
   try {
     moveAxisSettings.invertX = localStorage.getItem('tdf3_move_invert_x') === '1';
     moveAxisSettings.invertY = localStorage.getItem('tdf3_move_invert_y') === '1';
+    calibrated = localStorage.getItem('tdf3_move_calibrated') === '1';
   } catch {}
   updateMoveAxisButtons();
 
@@ -430,6 +445,79 @@ function initMoveAxisToggles() {
       updateMoveAxisButtons();
     });
   }
+
+  if (isTouch && !calibrated) {
+    startCalibrationWizard();
+  }
+}
+
+function startCalibrationWizard() {
+  calibrationWizard.active = true;
+  calibrationWizard.phase = 'y';
+  calibrationWizard.phaseElapsed = 0;
+  calibrationWizard.sumX = 0;
+  calibrationWizard.sumY = 0;
+  calibrationWizard.countX = 0;
+  calibrationWizard.countY = 0;
+  if ($calibReadout) {
+    $calibReadout.style.display = 'block';
+    $calibReadout.textContent = 'WIZARD: mové stick ARRIBA';
+  }
+}
+
+function finishCalibrationWizard() {
+  const avgX = calibrationWizard.countX > 0 ? (calibrationWizard.sumX / calibrationWizard.countX) : 0;
+  const avgY = calibrationWizard.countY > 0 ? (calibrationWizard.sumY / calibrationWizard.countY) : 0;
+  const resolved = resolveCalibrationResult({
+    avgX,
+    avgY,
+    countX: calibrationWizard.countX,
+    countY: calibrationWizard.countY,
+    prev: moveAxisSettings,
+  });
+
+  moveAxisSettings.invertX = resolved.invertX;
+  moveAxisSettings.invertY = resolved.invertY;
+  try {
+    localStorage.setItem('tdf3_move_invert_x', moveAxisSettings.invertX ? '1' : '0');
+    localStorage.setItem('tdf3_move_invert_y', moveAxisSettings.invertY ? '1' : '0');
+    localStorage.setItem('tdf3_move_calibrated', '1');
+  } catch {}
+  updateMoveAxisButtons();
+  calibrationWizard.active = false;
+  if ($calibReadout) $calibReadout.style.display = inputDebug.enabled ? 'block' : 'none';
+  if ($tip) {
+    $tip.style.display = 'block';
+    $tip.textContent = `Calibración aplicada: X ${moveAxisSettings.invertX ? 'invertido' : 'normal'} · Y ${moveAxisSettings.invertY ? 'invertido' : 'normal'}`;
+  }
+}
+
+function updateCalibrationWizard(dt) {
+  if (!calibrationWizard.active) return;
+
+  calibrationWizard.phaseElapsed += dt;
+  if (calibrationWizard.phase === 'y') {
+    if (Math.abs(touch.moveY) > 0.35) {
+      calibrationWizard.sumY += touch.moveY;
+      calibrationWizard.countY += 1;
+    }
+    if ($calibReadout) $calibReadout.textContent = 'WIZARD: mové stick ARRIBA';
+    if (calibrationWizard.phaseElapsed >= CALIB_PHASE_SECONDS) {
+      calibrationWizard.phase = 'x';
+      calibrationWizard.phaseElapsed = 0;
+    }
+    return;
+  }
+
+  if (Math.abs(touch.moveX) > 0.35) {
+    calibrationWizard.sumX += touch.moveX;
+    calibrationWizard.countX += 1;
+  }
+  if ($calibReadout) $calibReadout.textContent = 'WIZARD: mové stick DERECHA';
+
+  if (calibrationWizard.phaseElapsed >= CALIB_PHASE_SECONDS) {
+    finishCalibrationWizard();
+  }
 }
 
 function initCalibControl() {
@@ -439,6 +527,12 @@ function initCalibControl() {
       setInputDebugEnabled(!inputDebug.enabled);
       $btnCalib.textContent = `Calib: ${inputDebug.enabled ? 'On' : 'Off'}`;
       if ($calibReadout) $calibReadout.style.display = inputDebug.enabled ? 'block' : 'none';
+    });
+  }
+  if ($btnRecalib) {
+    $btnRecalib.addEventListener('click', (e) => {
+      e.preventDefault();
+      startCalibrationWizard();
     });
   }
 }
@@ -1175,6 +1269,7 @@ function tick(){
   const now = performance.now();
 
   updatePlayer(dt, now);
+  updateCalibrationWizard(dt);
   updateEnemies(dt, now);
   updateMission(dt);
   updateBeaconState(now);
