@@ -1,5 +1,4 @@
 import * as THREE from 'https://unpkg.com/three@0.182.0/build/three.module.js';
-import wallBrickUrl from './assets/wall-brick.jpg';
 import { stepExtractionProgress } from './extraction.js';
 
 const $hp = document.getElementById('hp');
@@ -58,7 +57,7 @@ scene.add(sun);
 const groundMat = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 1.0 });
 const iceMat = new THREE.MeshStandardMaterial({ color: 0x25314f, roughness: 0.8, metalness: 0.05 });
 
-const wallTexture = new THREE.TextureLoader().load(wallBrickUrl);
+const wallTexture = new THREE.TextureLoader().load('./assets/wall-brick.jpg');
 wallTexture.wrapS = THREE.RepeatWrapping;
 wallTexture.wrapT = THREE.RepeatWrapping;
 wallTexture.repeat.set(5, 2.2);
