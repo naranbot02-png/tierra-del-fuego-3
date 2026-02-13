@@ -136,40 +136,82 @@ const ground = new THREE.Mesh(new THREE.PlaneGeometry(240, 240), groundMat);
 ground.rotation.x = -Math.PI / 2;
 scene.add(ground);
 
-// Backdrop austral: mar frío + cordillera nevada + costa pedregosa (low-cost)
+// Backdrop austral v2: mar frío + costa + cordillera en capas (low-cost)
 const seaPlane = new THREE.Mesh(
-  new THREE.PlaneGeometry(260, 90),
-  new THREE.MeshBasicMaterial({ color: 0x4b6477, transparent: true, opacity: 0.42 })
+  new THREE.PlaneGeometry(280, 96),
+  new THREE.MeshBasicMaterial({ color: 0x4f697d, transparent: true, opacity: 0.4 })
 );
 seaPlane.rotation.x = -Math.PI / 2;
-seaPlane.position.set(0, 0.0, -86);
+seaPlane.position.set(0, 0.0, -88);
 scene.add(seaPlane);
 
 const coastBand = new THREE.Mesh(
-  new THREE.PlaneGeometry(260, 16),
-  new THREE.MeshBasicMaterial({ color: 0x667786, transparent: true, opacity: 0.35 })
+  new THREE.PlaneGeometry(280, 20),
+  new THREE.MeshBasicMaterial({ color: 0x6f7f8d, transparent: true, opacity: 0.34 })
 );
 coastBand.rotation.x = -Math.PI / 2;
-coastBand.position.set(0, 0.02, -47);
+coastBand.position.set(0, 0.02, -48);
 scene.add(coastBand);
 
-const mountainLine = new THREE.Group();
-const mountainMat = new THREE.MeshBasicMaterial({ color: 0x586674, transparent: true, opacity: 0.78 });
-const snowCapMat = new THREE.MeshBasicMaterial({ color: 0xd7e2eb, transparent: true, opacity: 0.72 });
-for (let i = 0; i < 9; i++) {
-  const w = 30 + (i % 3) * 8;
-  const h = 18 + (i % 4) * 5;
-  const peak = new THREE.Mesh(new THREE.ConeGeometry(w * 0.5, h, 3), mountainMat);
-  peak.position.set(-120 + i * 30, 9 + h * 0.5, -118 - (i % 2) * 6);
-  peak.rotation.y = (i * 0.4);
-  mountainLine.add(peak);
+const mistNear = new THREE.Mesh(
+  new THREE.PlaneGeometry(280, 34),
+  new THREE.MeshBasicMaterial({ color: 0x9aa9b8, transparent: true, opacity: 0.14 })
+);
+mistNear.rotation.x = -Math.PI / 2;
+mistNear.position.set(0, 0.04, -62);
+scene.add(mistNear);
 
-  const snow = new THREE.Mesh(new THREE.ConeGeometry(w * 0.18, h * 0.28, 3), snowCapMat);
-  snow.position.set(peak.position.x, peak.position.y + h * 0.25, peak.position.z);
-  snow.rotation.y = peak.rotation.y;
-  mountainLine.add(snow);
+const mistFar = new THREE.Mesh(
+  new THREE.PlaneGeometry(280, 54),
+  new THREE.MeshBasicMaterial({ color: 0xb2bfca, transparent: true, opacity: 0.1 })
+);
+mistFar.rotation.x = -Math.PI / 2;
+mistFar.position.set(0, 0.05, -102);
+scene.add(mistFar);
+
+const mountainNear = new THREE.Group();
+const mountainMid = new THREE.Group();
+const mountainFar = new THREE.Group();
+
+const mountainNearMat = new THREE.MeshBasicMaterial({ color: 0x556474, transparent: true, opacity: 0.88 });
+const mountainMidMat = new THREE.MeshBasicMaterial({ color: 0x657586, transparent: true, opacity: 0.76 });
+const mountainFarMat = new THREE.MeshBasicMaterial({ color: 0x7d8c9a, transparent: true, opacity: 0.62 });
+const snowCapMat = new THREE.MeshBasicMaterial({ color: 0xdde7ef, transparent: true, opacity: 0.72 });
+
+function addRidge(group, material, x, z, w, h, rot = 0) {
+  const ridge = new THREE.Mesh(new THREE.ConeGeometry(w * 0.5, h, 3), material);
+  ridge.position.set(x, 7 + h * 0.5, z);
+  ridge.rotation.y = rot;
+  group.add(ridge);
+  return ridge;
 }
-scene.add(mountainLine);
+
+for (let i = 0; i < 6; i++) {
+  const h = 22 + (i % 3) * 6;
+  const ridge = addRidge(mountainFar, mountainFarMat, -130 + i * 50, -142 - (i % 2) * 8, 56, h, i * 0.35);
+  const snow = new THREE.Mesh(new THREE.ConeGeometry(9, h * 0.28, 3), snowCapMat);
+  snow.position.set(ridge.position.x, ridge.position.y + h * 0.22, ridge.position.z);
+  snow.rotation.y = ridge.rotation.y;
+  mountainFar.add(snow);
+}
+for (let i = 0; i < 7; i++) {
+  const h = 18 + (i % 4) * 5;
+  const ridge = addRidge(mountainMid, mountainMidMat, -126 + i * 42, -126 - (i % 2) * 6, 42, h, i * 0.28);
+  if (i % 2 === 0) {
+    const snow = new THREE.Mesh(new THREE.ConeGeometry(7, h * 0.24, 3), snowCapMat);
+    snow.position.set(ridge.position.x, ridge.position.y + h * 0.2, ridge.position.z);
+    snow.rotation.y = ridge.rotation.y;
+    mountainMid.add(snow);
+  }
+}
+for (let i = 0; i < 5; i++) {
+  const h = 14 + (i % 3) * 4;
+  addRidge(mountainNear, mountainNearMat, -110 + i * 55, -110 - (i % 2) * 4, 34, h, i * 0.22);
+}
+
+scene.add(mountainFar);
+scene.add(mountainMid);
+scene.add(mountainNear);
 
 const staticColliders = [];
 
@@ -2044,8 +2086,11 @@ function tick(){
   updateExtractionIndicator();
 
   const seaPulse = 0.5 + Math.sin(now * 0.0009) * 0.5;
-  seaPlane.material.opacity = 0.34 + seaPulse * 0.12;
-  coastBand.material.opacity = 0.24 + seaPulse * 0.1;
+  const mistPulse = 0.5 + Math.sin(now * 0.00045) * 0.5;
+  seaPlane.material.opacity = 0.32 + seaPulse * 0.12;
+  coastBand.material.opacity = 0.22 + seaPulse * 0.1;
+  mistNear.material.opacity = 0.1 + mistPulse * 0.08;
+  mistFar.material.opacity = 0.07 + mistPulse * 0.06;
 
   const canShoot = mission.phase === 'playing';
   const wantShoot = canShoot && ((!isTouch && pointerLocked && (keys.has('KeyF'))) || state.fire || (!isTouch && pointerLocked && mouseDown));
