@@ -1177,14 +1177,16 @@ function updateBeaconState(now) {
 
   if (mission.phase === 'playing' && mission.extractionReady) {
     const p = THREE.MathUtils.clamp(mission.extractionProgress / mission.extractionDuration, 0, 1);
+    const graceCritical = !mission.extractionInside && mission.extractionOutGraceLeft > 0 && mission.extractionOutGraceLeft <= 0.2;
     extractionZone.visible = true;
     extractionZone.material.opacity = 0.22 + pulse * 0.22 + p * 0.2;
     extractionZone.scale.setScalar(1 + (1 - p) * 0.06);
     beacon.material.emissiveIntensity = baseGlow + 0.25 + p * 0.75;
-    beaconLight.intensity = 2.8 + pulse * 0.9 + p * 1.1;
+    beaconLight.intensity = graceCritical ? (3.6 + pulse * 1.3) : (2.8 + pulse * 0.9 + p * 1.1);
     beaconBeam.visible = true;
     beaconBeam.scale.set(1 + pulse * 0.05, 1, 1 + pulse * 0.05);
-    beaconBeam.material.opacity = 0.16 + pulse * 0.12 + p * 0.08;
+    beaconBeam.material.opacity = graceCritical ? (0.22 + pulse * 0.24) : (0.16 + pulse * 0.12 + p * 0.08);
+    beaconBeam.material.color.setHex(graceCritical ? 0xfb7185 : 0x67e8f9);
     return;
   }
 
@@ -1196,6 +1198,7 @@ function updateBeaconState(now) {
   beaconBeam.visible = mission.phase === 'playing';
   beaconBeam.scale.set(1, 1, 1);
   beaconBeam.material.opacity = 0.08 + pulse * 0.06;
+  beaconBeam.material.color.setHex(0x67e8f9);
 }
 
 function updateExtractionIndicator() {
