@@ -311,6 +311,10 @@ const moveAxisSettings = {
   invertY: false,
 };
 
+const movementTelemetry = {
+  sprinting: false,
+};
+
 const calibrationWizard = {
   active: false,
   phase: 'y',
@@ -880,6 +884,7 @@ Manual smoke tests (input refactor):
 function applyMovementFromIntent(intentX, intentY, dt) {
   const sprinting = isKeyboardSprinting(keys, mission.phase)
     || isTouchAutoSprinting({ isTouch, missionPhase: mission.phase, intentX, intentY });
+  movementTelemetry.sprinting = sprinting;
   const speed = sprinting ? MOVE_SPEED * SPRINT_MULTIPLIER : MOVE_SPEED;
   const { worldX, worldZ } = intentToWorldDelta({ camera, state, intentX, intentY, dt, speed });
   movePlayerWithCollisions(worldX, worldZ);
@@ -1141,6 +1146,7 @@ function updateMission(dt){
     hp: state.hp,
     isTouch,
     threat,
+    sprinting: movementTelemetry.sprinting,
     refs: {
       missionStatusEl: $missionStatus,
       missionObjectiveEl: $missionObjective,

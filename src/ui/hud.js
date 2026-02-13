@@ -47,7 +47,7 @@ export function updateMissionMini({ mission, refs }) {
   missionMiniFillEl.style.width = `${Math.round(clamp01(progress) * 100)}%`;
 }
 
-export function renderHudText({ mission, hp, isTouch, threat, refs }) {
+export function renderHudText({ mission, hp, isTouch, threat, sprinting = false, refs }) {
   const { missionStatusEl, missionObjectiveEl, missionTimerEl, hpEl } = refs;
   const extractionPct = Math.round((mission.extractionProgress / mission.extractionDuration) * 100);
   const mobileCopy = isTouch;
@@ -107,15 +107,16 @@ export function renderHudText({ mission, hp, isTouch, threat, refs }) {
         : `Inicio en: ${Math.ceil(mission.prepLeft)}s`;
     } else if (mission.phase === 'playing') {
       const timeCompact = `${Math.ceil(mission.timeLeft)}s`;
+      const sprintTag = sprinting ? (mobileCopy ? ' · ⚡' : ' · Sprint') : '';
       if (mission.extractionReady) {
         const graceLeft = Math.max(0, mission.extractionOutGraceLeft);
         const inGrace = !mission.extractionInside && mission.extractionProgress > 0 && graceLeft > 0;
         const graceTag = inGrace ? ` · hold ${graceLeft.toFixed(1)}s` : '';
         missionTimerEl.textContent = mobileCopy
-          ? `${timeCompact} · ${threatShort}${inGrace ? ` · ${graceLeft.toFixed(1)}s` : ''}`
-          : `Tiempo: ${timeCompact} · Amenaza ${threatLabel}${graceTag}`;
+          ? `${timeCompact} · ${threatShort}${inGrace ? ` · ${graceLeft.toFixed(1)}s` : ''}${sprintTag}`
+          : `Tiempo: ${timeCompact} · Amenaza ${threatLabel}${graceTag}${sprintTag}`;
       } else {
-        missionTimerEl.textContent = mobileCopy ? timeCompact : `Tiempo: ${timeCompact}`;
+        missionTimerEl.textContent = mobileCopy ? `${timeCompact}${sprintTag}` : `Tiempo: ${timeCompact}${sprintTag}`;
       }
     } else {
       missionTimerEl.textContent = mobileCopy ? '↻ Reiniciar' : 'Reiniciar: tecla R / botón ↻';
