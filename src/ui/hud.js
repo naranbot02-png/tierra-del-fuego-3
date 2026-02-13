@@ -26,12 +26,13 @@ export function updateMissionMini({ mission, refs }) {
   } else if (mission.phase === 'playing' && !mission.extractionReady) {
     label = `Drones ${mission.kills}/${mission.targetKills}`;
     progress = mission.targetKills > 0 ? (mission.kills / mission.targetKills) : 0;
-    tone = 'combat';
+    tone = mission.timeLeft <= 15 ? 'danger' : 'combat';
   } else if (mission.phase === 'playing' && mission.extractionReady) {
     const extractionPct = Math.round((mission.extractionProgress / mission.extractionDuration) * 100);
     label = mission.extractionInside ? `Extracción ${extractionPct}%` : `Faro ${extractionPct}%`;
     progress = mission.extractionProgress / mission.extractionDuration;
-    tone = 'extract';
+    const lowGrace = !mission.extractionInside && mission.extractionOutGraceLeft > 0 && mission.extractionOutGraceLeft <= 0.2;
+    tone = lowGrace ? 'danger' : 'extract';
   } else if (mission.result === 'win') {
     label = 'Misión completada';
     progress = 1;
