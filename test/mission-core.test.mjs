@@ -55,3 +55,64 @@ test('hold/grace: fuera del faro mantiene y luego decae progreso', () => {
   assert.ok(mission.extractionProgress < 1);
   assert.ok(events.some((e) => e.type === 'extraction-grace-expired'));
 });
+
+test('emite warn-threat-2 y warn-threat-3 en sus umbrales', () => {
+  const mission = createMissionState({ targetKills: 3, extractionRadius: 6.5 });
+  const feedbackFlags = createFeedbackFlags();
+  mission.phase = 'playing';
+
+  mission.timeLeft = 50;
+  const threat2Step = stepMissionCore({
+    mission,
+    feedbackFlags,
+    dt: 1,
+    playerHp: 100,
+    insideExtractionZone: false,
+  });
+  assert.ok(threat2Step.events.some((e) => e.type === 'warn-threat-2'));
+
+  mission.timeLeft = 25;
+  const threat3Step = stepMissionCore({
+    mission,
+    feedbackFlags,
+    dt: 1,
+    playerHp: 100,
+    insideExtractionZone: false,
+  });
+  assert.ok(threat3Step.events.some((e) => e.type === 'warn-threat-3'));
+});
+
+test('ramas terminales: mission-win y mission-lose', () => {
+  const missionWin = createMissionState({ targetKills: 3, extractionRadius: 6.5 });
+  const flagsWin = createFeedbackFlags();
+  missionWin.phase = 'playing';
+  missionWin.extractionReady = true;
+  missionWin.extractionProgress = 2.55;
+
+  const winStep = stepMissionCore({
+    mission: missionWin,
+    feedbackFlags: flagsWin,
+    dt: 0.1,
+    playerHp: 100,
+    insideExtractionZone: true,
+  });
+  assert.equal(missionWin.phase, 'result');
+  assert.equal(missionWin.result, 'win');
+  assert.ok(winStep.events.some((e) => e.type === 'mission-win'));
+
+  const missionLose = createMissionState({ targetKills: 3, extractionRadius: 6.5 });
+  const flagsLose = createFeedbackFlags();
+  missionLose.phase = 'playing';
+  missionLose.timeLeft = 0.05;
+
+  const loseStep = stepMissionCore({
+    mission: missionLose,
+    feedbackFlags: flagsLose,
+    dt: 0.1,
+    playerHp: 100,
+    insideExtractionZone: false,
+  });
+  assert.equal(missionLose.phase, 'result');
+  assert.equal(missionLose.result, 'lose');
+  assert.ok(loseStep.events.some((e) => e.type === 'mission-lose'));
+});
