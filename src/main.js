@@ -83,8 +83,8 @@ renderer.toneMappingExposure = isTouch ? 1.15 : 1.2;
 document.body.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x8696a6);
-scene.fog = new THREE.Fog(0x7f8fa0, 24, 128);
+scene.background = new THREE.Color(0x8b99a8);
+scene.fog = new THREE.Fog(0x8797a8, 22, 124);
 
 const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.1, 250);
 
@@ -170,6 +170,20 @@ const mistFar = new THREE.Mesh(
 mistFar.rotation.x = -Math.PI / 2;
 mistFar.position.set(0, 0.05, -102);
 scene.add(mistFar);
+
+const skyBandNear = new THREE.Mesh(
+  new THREE.PlaneGeometry(300, 56),
+  new THREE.MeshBasicMaterial({ color: 0x95a6b8, transparent: true, opacity: 0.22 })
+);
+skyBandNear.position.set(0, 32, -118);
+scene.add(skyBandNear);
+
+const skyBandFar = new THREE.Mesh(
+  new THREE.PlaneGeometry(300, 46),
+  new THREE.MeshBasicMaterial({ color: 0xb0bdc9, transparent: true, opacity: 0.15 })
+);
+skyBandFar.position.set(0, 43, -150);
+scene.add(skyBandFar);
 
 const mountainNear = new THREE.Group();
 const mountainMid = new THREE.Group();
@@ -304,8 +318,8 @@ addBox(-20, 1.0, -8, 3.2, 2.0, 1.2, darkPanelMat, { solid: true, colliderTag: 'c
 addBox(22, 1.0, 6, 3.2, 2.0, 1.2, darkPanelMat, { solid: true, colliderTag: 'cover' });
 
 // Ruta riesgo/recompensa: rápida (expuesta) vs segura (coberturas)
-const fastRouteMat = new THREE.MeshBasicMaterial({ color: 0xf97316, map: txBrickFloor003, transparent: true, opacity: 0.18 });
-const safeRouteMat = new THREE.MeshBasicMaterial({ color: 0x4ade80, map: txBrickWall12, transparent: true, opacity: 0.16 });
+const fastRouteMat = new THREE.MeshBasicMaterial({ color: 0xea7a3d, map: txBrickFloor003, transparent: true, opacity: 0.16 });
+const safeRouteMat = new THREE.MeshBasicMaterial({ color: 0x66ce8e, map: txBrickWall12, transparent: true, opacity: 0.15 });
 
 const fastRoutePosts = [];
 const safeRoutePosts = [];
@@ -337,7 +351,7 @@ addBox(
 );
 const beacon = new THREE.Mesh(
   new THREE.SphereGeometry(0.9, 18, 12),
-  new THREE.MeshStandardMaterial({ color: 0x67e8f9, emissive: 0x67e8f9, emissiveIntensity: 1.6 })
+  new THREE.MeshStandardMaterial({ color: 0xb7d7e6, map: txBlueMetalPlate, roughness: 0.24, metalness: 0.2, emissive: 0x67e8f9, emissiveIntensity: 1.25 })
 );
 const beaconBeam = new THREE.Mesh(
   new THREE.CylinderGeometry(0.16, 1.15, 34, 20, 1, true),
@@ -1428,6 +1442,13 @@ function spawnEnemy(x,z){
   const eye = new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 10), new THREE.MeshStandardMaterial({ color: 0xfef3c7, emissive: 0xfef3c7, emissiveIntensity: 0.35 }));
   eye.position.set(0, 0.05, 0.42);
   body.add(eye);
+
+  const rim = new THREE.Mesh(
+    new THREE.SphereGeometry(0.5, 14, 10),
+    new THREE.MeshBasicMaterial({ color: 0xcde7ff, transparent: true, opacity: 0.2, side: THREE.BackSide })
+  );
+  body.add(rim);
+
   scene.add(body);
   enemies.push({ mesh: body, hp: 3, dead: false, base: new THREE.Vector3(x,1.4,z), spawn: new THREE.Vector3(x,1.4,z), t: Math.random()*10, hitCd: 0, waveMoveMul: 1, waveDamageMul: 1 });
 }
@@ -2093,6 +2114,8 @@ function tick(){
   coastBand.material.opacity = 0.22 + seaPulse * 0.1;
   mistNear.material.opacity = 0.1 + mistPulse * 0.08;
   mistFar.material.opacity = 0.07 + mistPulse * 0.06;
+  skyBandNear.material.opacity = 0.16 + mistPulse * 0.1;
+  skyBandFar.material.opacity = 0.1 + mistPulse * 0.07;
 
   txSeaSurface.offset.x = (now * 0.000015) % 1;
   txSeaSurface.offset.y = (now * 0.00003) % 1;

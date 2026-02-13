@@ -12,6 +12,10 @@
         font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
         color: #e5e7eb; font-size: 14px; line-height: 1.25;
         user-select:none;
+        background: rgba(2,6,23,.30);
+        border: 1px solid rgba(255,255,255,.08);
+        border-radius: 12px;
+        padding: 7px 8px;
       }
       #hud .k { color:#9ca3af; }
       #hud .pill { display:inline-block; padding:2px 8px; border:1px solid rgba(255,255,255,.15); border-radius:999px; margin-right:6px; }
@@ -28,7 +32,7 @@
         padding: 6px 8px;
         border-radius: 10px;
         border: 1px solid rgba(255,255,255,.12);
-        background: rgba(2,6,23,.35);
+        background: rgba(2,6,23,.28);
       }
       #missionMiniLabel {
         display: block;
@@ -109,18 +113,18 @@
         position: absolute;
         width: 160px; height: 160px;
         border-radius: 999px;
-        background: rgba(255,255,255,.06);
-        border: 1px solid rgba(255,255,255,.12);
+        background: rgba(255,255,255,.045);
+        border: 1px solid rgba(255,255,255,.09);
         backdrop-filter: blur(6px);
         pointer-events: auto;
         touch-action: none;
       }
       .stick {
         position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
-        width: 68px; height: 68px;
+        width: 60px; height: 60px;
         border-radius: 999px;
-        background: rgba(249,115,22,.75);
-        border: 1px solid rgba(0,0,0,.25);
+        background: rgba(249,115,22,.68);
+        border: 1px solid rgba(0,0,0,.2);
       }
       #movePad { left: 18px; bottom: 18px; }
       #lookPad { right: 18px; bottom: 18px; }
@@ -136,23 +140,23 @@
         pointer-events: auto;
         touch-action: none;
       }
-      /* Keep action buttons on the right side, above the look pad, without overlap */
-      #btnFire { right: 26px; bottom: 196px; }
-      #btnJump { right: 34px; bottom: 300px; width: 72px; height: 72px; border-radius: 18px; font-weight: 900; }
-      #btnRestart { left: 14px; top: max(16px, env(safe-area-inset-top)); width: 46px; height: 46px; border-radius: 12px; font-weight: 900; font-size: 20px; background: rgba(0,0,0,.35); }
+      /* FIRE dominante + J separado para ergonomía */
+      #btnFire { right: 20px; bottom: 178px; width: 98px; height: 98px; border-radius: 22px; background: rgba(239,68,68,.2); }
+      #btnJump { right: 36px; bottom: 294px; width: 64px; height: 64px; border-radius: 17px; font-weight: 900; background: rgba(255,255,255,.12); }
+      #btnRestart { right: 12px; top: max(16px, env(safe-area-inset-top)); width: 44px; height: 44px; border-radius: 12px; font-weight: 900; font-size: 20px; background: rgba(0,0,0,.32); }
 
       /* Compact layout: bring controls closer to thumbs */
       body.layout-compact #movePad { left: 8px; bottom: 8px; width: 148px; height: 148px; }
       body.layout-compact #lookPad { right: 8px; bottom: 8px; width: 148px; height: 148px; }
-      body.layout-compact #btnFire { right: 10px; bottom: 162px; width: 84px; height: 84px; }
-      body.layout-compact #btnJump { right: 18px; bottom: 252px; width: 64px; height: 64px; }
+      body.layout-compact #btnFire { right: 10px; bottom: 154px; width: 90px; height: 90px; }
+      body.layout-compact #btnJump { right: 24px; bottom: 258px; width: 58px; height: 58px; }
 
       /* Left-hand mode: mirror thumb zones and action buttons */
       body.layout-lefty #movePad { left: auto; right: 18px; }
       body.layout-lefty #lookPad { right: auto; left: 18px; }
       body.layout-lefty #btnFire { right: auto; left: 26px; }
       body.layout-lefty #btnJump { right: auto; left: 34px; }
-      body.layout-lefty #btnRestart { left: auto; right: 14px; }
+      body.layout-lefty #btnRestart { right: 12px; left: auto; }
 
       body.layout-lefty.layout-compact #movePad { left: auto; right: 8px; }
       body.layout-lefty.layout-compact #lookPad { right: auto; left: 8px; }

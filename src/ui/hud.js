@@ -63,10 +63,9 @@ export function renderHudText({ mission, hp, isTouch, threat, extractionDistance
         missionStatusEl.textContent = mission.extractionInside ? 'Extrayendo' : 'Evacuación';
       } else {
         const waveTag = `${currentWaveIndex + 1}/${totalWaves}`;
-        const directorTag = directorMode === 'pressure' ? '↑' : (directorMode === 'calm' ? '↓' : '·');
         const eta = pendingWaveActive ? ` · T-${Math.max(0, pendingWaveDelay).toFixed(1)}s` : '';
         missionStatusEl.textContent = isTouch
-          ? `Oleada ${waveTag} ${directorTag}${eta}`
+          ? `Oleada ${waveTag} · ${Math.ceil(mission.timeLeft)}s`
           : `Oleada ${waveTag} · ${currentWaveName}${eta} · dir ${directorMode}`;
       }
     } else {
