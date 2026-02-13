@@ -43,7 +43,7 @@ test('hold/grace: fuera del faro mantiene y luego decae progreso', () => {
   assert.equal(mission.extractionProgress, 1);
   assert.equal(mission.extractionOutGraceLeft, 0.3);
 
-  stepMissionCore({
+  const { events } = stepMissionCore({
     mission,
     feedbackFlags,
     dt: 0.4,
@@ -53,4 +53,5 @@ test('hold/grace: fuera del faro mantiene y luego decae progreso', () => {
 
   assert.equal(mission.extractionOutGraceLeft, 0);
   assert.ok(mission.extractionProgress < 1);
+  assert.ok(events.some((e) => e.type === 'extraction-grace-expired'));
 });

@@ -53,6 +53,8 @@ export function stepMissionCore({ mission, feedbackFlags, dt, playerHp, insideEx
 
   if (mission.extractionReady) {
     const wasInside = mission.extractionInside;
+    const prevGraceLeft = mission.extractionOutGraceLeft;
+    const hadProgress = mission.extractionProgress > 0;
     const extractionStep = stepExtractionProgress({
       progress: mission.extractionProgress,
       inside: insideExtractionZone,
@@ -66,6 +68,11 @@ export function stepMissionCore({ mission, feedbackFlags, dt, playerHp, insideEx
     mission.extractionProgress = extractionStep.progress;
     mission.extractionInside = extractionStep.inside;
     mission.extractionOutGraceLeft = extractionStep.outGraceLeft;
+
+    const graceExpiredNow = prevGraceLeft > 0 && mission.extractionOutGraceLeft <= 0;
+    if (graceExpiredNow && hadProgress && !mission.extractionInside) {
+      events.push({ type: 'extraction-grace-expired' });
+    }
 
     if (!wasInside && mission.extractionInside) {
       events.push({ type: 'extraction-entered' });

@@ -57,6 +57,15 @@ export function applyMissionEffects({ events, mission, isTouch, tipEl, beep, sfx
       if (isTouch) vibrate?.(12);
     }
 
+    if (ev.type === 'extraction-grace-expired') {
+      beep({ freq: 240, duration: 0.08, type: 'sawtooth', gain: 0.028 });
+      if (tipEl) {
+        tipEl.textContent = 'Se perdió la cobertura del faro: la extracción cae.';
+        tipEl.style.display = 'block';
+        if (isTouch) setTimeout(() => { if (mission.phase === 'playing') tipEl.style.display = 'none'; }, 900);
+      }
+    }
+
     if (ev.type === 'mission-win') {
       sfxWin();
       if (tipEl) {
