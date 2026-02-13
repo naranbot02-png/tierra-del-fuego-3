@@ -426,6 +426,17 @@ const runTelemetry = {
   balanceWaveDelayBonus: 0,
 };
 
+const director = {
+  pressure: 0.45,
+  targetPressure: 0.45,
+  mode: 'normal', // calm | normal | pressure
+  recentDamage: 0,
+  killRate: 0,
+  lastKills: 0,
+  modeChanges: 0,
+  adjustLog: [],
+};
+
 function resetRunTelemetry() {
   runTelemetry.phaseTime.prep = 0;
   runTelemetry.phaseTime.playing = 0;
@@ -440,6 +451,66 @@ function resetRunTelemetry() {
     runTelemetry.balanceWaveDelayBonus = Number(localStorage.getItem('tdf3_balance_wave_delay_bonus') || 0) || 0;
   } catch {
     runTelemetry.balanceWaveDelayBonus = 0;
+  }
+
+  director.pressure = 0.45;
+  director.targetPressure = 0.45;
+  director.mode = 'normal';
+  director.recentDamage = 0;
+  director.killRate = 0;
+  director.lastKills = 0;
+  director.modeChanges = 0;
+  director.adjustLog = [];
+}
+
+function getDirectorDensityMul() {
+  return THREE.MathUtils.clamp(0.9 + director.pressure * 0.25, 0.85, 1.15);
+}
+
+function getDirectorDelayMul() {
+  return THREE.MathUtils.clamp(1.2 - director.pressure * 0.35, 0.85, 1.25);
+}
+
+function getDirectorDamageMul() {
+  return THREE.MathUtils.clamp(0.9 + director.pressure * 0.25, 0.85, 1.2);
+}
+
+function updateDirector(dt) {
+  if (mission.phase !== 'playing') return;
+
+  const killsDelta = Math.max(0, mission.kills - director.lastKills);
+  director.lastKills = mission.kills;
+  const instKillRate = killsDelta / Math.max(0.001, dt);
+  director.killRate = THREE.MathUtils.lerp(director.killRate, instKillRate, Math.min(1, dt * 2.5));
+
+  director.recentDamage = Math.max(0, director.recentDamage - dt * 7.5);
+
+  const struggling = THREE.MathUtils.clamp(
+    Math.max(director.recentDamage / 26, (45 - state.hp) / 45),
+    0,
+    1
+  );
+  const dominating = THREE.MathUtils.clamp((director.killRate - 0.9) / 1.4, 0, 1);
+  const timeSignal = THREE.MathUtils.clamp((35 - mission.timeLeft) / 35, 0, 1);
+  const extractionSignal = mission.extractionReady ? 0.08 : 0;
+
+  director.targetPressure = THREE.MathUtils.clamp(
+    0.44 + timeSignal * 0.22 + dominating * 0.2 + extractionSignal - struggling * 0.32,
+    0.2,
+    0.82
+  );
+
+  director.pressure += (director.targetPressure - director.pressure) * Math.min(1, dt * 1.25);
+
+  const prevMode = director.mode;
+  if (director.pressure < 0.36) director.mode = 'calm';
+  else if (director.pressure > 0.62) director.mode = 'pressure';
+  else director.mode = 'normal';
+
+  if (director.mode !== prevMode) {
+    director.modeChanges += 1;
+    director.adjustLog.push({ at: Number((mission.timeLimit - mission.timeLeft).toFixed(1)), mode: director.mode, p: Number(director.pressure.toFixed(2)) });
+    director.adjustLog = director.adjustLog.slice(-10);
   }
 }
 
@@ -464,6 +535,7 @@ function maybeShowRunSummary() {
       fastPct,
       safePct,
       playingTime: Number(runTelemetry.phaseTime.playing.toFixed(1)),
+      directorModeChanges: director.modeChanges,
       at: Date.now(),
     });
     localStorage.setItem('tdf3_recent_runs', JSON.stringify(runs.slice(-8)));
@@ -471,7 +543,7 @@ function maybeShowRunSummary() {
 
   $missionFeed.classList.remove('feed-warn', 'feed-danger', 'feed-good');
   $missionFeed.classList.add('show', mission.result === 'win' ? 'feed-good' : 'feed-warn');
-  $missionFeed.textContent = `Run: ${cause} · dmg ${Math.round(runTelemetry.damageReceived)} · ruta rápida ${fastPct}% / segura ${safePct}% · tune d${tuning.density.toFixed(1)} Δ${tuning.delayMul.toFixed(1)} x${tuning.damageMul.toFixed(1)} · next delay+${nextBonus.toFixed(2)}s`;
+  $missionFeed.textContent = `Run: ${cause} · dmg ${Math.round(runTelemetry.damageReceived)} · director ${director.mode}/${director.modeChanges} · ruta rápida ${fastPct}% / segura ${safePct}% · tune d${tuning.density.toFixed(1)} Δ${tuning.delayMul.toFixed(1)} x${tuning.damageMul.toFixed(1)} · next delay+${nextBonus.toFixed(2)}s`;
 }
 
 
@@ -1147,7 +1219,8 @@ spawnEnemy(6, 8);
 // targetKills is recalculated by deployWave based on tuning density.
 
 function getActiveEnemiesPerWave() {
-  return THREE.MathUtils.clamp(Math.round(enemies.length * tuning.density), 1, enemies.length);
+  const effectiveDensity = tuning.density * getDirectorDensityMul();
+  return THREE.MathUtils.clamp(Math.round(enemies.length * effectiveDensity), 1, enemies.length);
 }
 
 function deployWave(waveIndex) {
@@ -1194,7 +1267,8 @@ function updateEnemies(dt, now){
   for (const e of enemies){
     if (e.hp <= 0) continue;
     aliveCount += 1;
-    e.t += dt * threat.moveMul * (e.waveMoveMul || 1);
+    const liveMoveMul = (e.waveMoveMul || 1) * getDirectorDamageMul();
+    e.t += dt * threat.moveMul * liveMoveMul;
     e.hitCd = Math.max(0, e.hitCd - dt);
     e.mesh.position.x = e.base.x + Math.sin(e.t*0.8)*1.3;
     e.mesh.position.z = e.base.z + Math.cos(e.t*0.7)*1.3;
@@ -1203,8 +1277,9 @@ function updateEnemies(dt, now){
     const dist = e.mesh.position.distanceTo(state.pos);
     const globalHurtReady = (now - lastDamageAt) >= PLAYER_HURT_IFRAME_MS;
     if (dist < 1.9 && e.hitCd <= 0 && globalHurtReady && mission.phase === 'playing') {
-      const waveDamage = Math.round(threat.damage * (e.waveDamageMul || 1));
+      const waveDamage = Math.round(threat.damage * (e.waveDamageMul || 1) * getDirectorDamageMul());
       runTelemetry.damageReceived += waveDamage;
+      director.recentDamage += waveDamage;
       state.hp = Math.max(0, state.hp - waveDamage);
       e.hitCd = threat.hitCooldown;
       lastDamageAt = now;
@@ -1216,7 +1291,7 @@ function updateEnemies(dt, now){
   const hasNextWave = currentWaveIndex < (WAVE_CONFIGS.length - 1);
   if (mission.phase === 'playing' && aliveCount === 0 && hasNextWave && pendingWaveIndex == null && mission.kills < mission.targetKills) {
     pendingWaveIndex = currentWaveIndex + 1;
-    pendingWaveDelay = (WAVE_CONFIGS[pendingWaveIndex].delay * tuning.delayMul) + runTelemetry.balanceWaveDelayBonus;
+    pendingWaveDelay = (WAVE_CONFIGS[pendingWaveIndex].delay * tuning.delayMul * getDirectorDelayMul()) + runTelemetry.balanceWaveDelayBonus;
     if ($tip) {
       $tip.style.display = 'block';
       $tip.textContent = `Reagrupando drones… próxima oleada en ${pendingWaveDelay.toFixed(1)}s`;
@@ -1336,7 +1411,7 @@ function maybeLogInputDebug(now, intentX, intentY, worldX, worldZ) {
     $tip.textContent = msg;
   }
   if ($calibReadout) {
-    $calibReadout.textContent = `intent(${intentX.toFixed(2)}, ${intentY.toFixed(2)}) · world(${worldX.toFixed(2)}, ${worldZ.toFixed(2)}) · yaw ${THREE.MathUtils.radToDeg(state.yaw).toFixed(1)}°`;
+    $calibReadout.textContent = `intent(${intentX.toFixed(2)}, ${intentY.toFixed(2)}) · world(${worldX.toFixed(2)}, ${worldZ.toFixed(2)}) · yaw ${THREE.MathUtils.radToDeg(state.yaw).toFixed(1)}° · dir:${director.mode} p${director.pressure.toFixed(2)}`;
   }
 
   if (now - inputDebug.lastLogAt > 250) {
@@ -1774,6 +1849,8 @@ function tick(){
     if (inFastRoute) runTelemetry.routeFastTime += dt;
     if (inSafeRoute) runTelemetry.routeSafeTime += dt;
   }
+
+  updateDirector(dt);
 
   updateEnemies(dt, now);
   updateMission(dt);
