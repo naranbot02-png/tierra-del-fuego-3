@@ -46,6 +46,14 @@ const $btnInvY = document.getElementById('btnInvY');
 const $btnCalib = document.getElementById('btnCalib');
 const $btnRecalib = document.getElementById('btnRecalib');
 const $btnLockCtrl = document.getElementById('btnLockCtrl');
+const $tuneDensity = document.getElementById('tuneDensity');
+const $tuneDelay = document.getElementById('tuneDelay');
+const $tuneDamage = document.getElementById('tuneDamage');
+const $tvDensity = document.getElementById('tvDensity');
+const $tvDelay = document.getElementById('tvDelay');
+const $tvDamage = document.getElementById('tvDamage');
+const $btnTunePresetNormal = document.getElementById('btnTunePresetNormal');
+const $btnTunePresetHard = document.getElementById('btnTunePresetHard');
 const $calibReadout = document.getElementById('calibReadout');
 const $btnRestart = document.getElementById('btnRestart');
 const $btnSettings = document.getElementById('btnSettings');
@@ -397,6 +405,12 @@ const movementTelemetry = {
   sprinting: false,
 };
 
+const tuning = {
+  density: 1.0,
+  delayMul: 1.0,
+  damageMul: 1.0,
+};
+
 const runTelemetry = {
   phaseTime: { prep: 0, playing: 0, result: 0 },
   waveTime: [0, 0, 0],
@@ -440,7 +454,7 @@ function maybeShowRunSummary() {
 
   $missionFeed.classList.remove('feed-warn', 'feed-danger', 'feed-good');
   $missionFeed.classList.add('show', mission.result === 'win' ? 'feed-good' : 'feed-warn');
-  $missionFeed.textContent = `Run: ${cause} · dmg ${Math.round(runTelemetry.damageReceived)} · ruta rápida ${fastPct}% / segura ${safePct}% · next delay+${nextBonus.toFixed(2)}s`;
+  $missionFeed.textContent = `Run: ${cause} · dmg ${Math.round(runTelemetry.damageReceived)} · ruta rápida ${fastPct}% / segura ${safePct}% · tune d${tuning.density.toFixed(1)} Δ${tuning.delayMul.toFixed(1)} x${tuning.damageMul.toFixed(1)} · next delay+${nextBonus.toFixed(2)}s`;
 }
 
 
@@ -478,6 +492,73 @@ function applyConfigButtonsVisibility() {
   if ($btnInvX) $btnInvX.style.display = '';
   if ($btnInvY) $btnInvY.style.display = '';
   if ($btnCalib) $btnCalib.style.display = '';
+}
+
+function applyTuningPreset(kind) {
+  if (kind === 'hard') {
+    tuning.density = 1.3;
+    tuning.delayMul = 0.85;
+    tuning.damageMul = 1.25;
+  } else {
+    tuning.density = 1.0;
+    tuning.delayMul = 1.0;
+    tuning.damageMul = 1.0;
+  }
+  if ($tuneDensity) $tuneDensity.value = String(tuning.density);
+  if ($tuneDelay) $tuneDelay.value = String(tuning.delayMul);
+  if ($tuneDamage) $tuneDamage.value = String(tuning.damageMul);
+  refreshTuningUiLabels();
+  saveTuningSettings();
+}
+
+function refreshTuningUiLabels() {
+  if ($tvDensity) $tvDensity.textContent = tuning.density.toFixed(2);
+  if ($tvDelay) $tvDelay.textContent = tuning.delayMul.toFixed(2);
+  if ($tvDamage) $tvDamage.textContent = tuning.damageMul.toFixed(2);
+}
+
+function saveTuningSettings() {
+  try {
+    localStorage.setItem('tdf3_tune_density', String(tuning.density));
+    localStorage.setItem('tdf3_tune_delay', String(tuning.delayMul));
+    localStorage.setItem('tdf3_tune_damage', String(tuning.damageMul));
+  } catch {}
+}
+
+function initTuningPanel() {
+  try {
+    tuning.density = Number(localStorage.getItem('tdf3_tune_density') || 1) || 1;
+    tuning.delayMul = Number(localStorage.getItem('tdf3_tune_delay') || 1) || 1;
+    tuning.damageMul = Number(localStorage.getItem('tdf3_tune_damage') || 1) || 1;
+  } catch {}
+
+  if ($tuneDensity) {
+    $tuneDensity.value = String(tuning.density);
+    $tuneDensity.addEventListener('input', () => {
+      tuning.density = Number($tuneDensity.value);
+      refreshTuningUiLabels();
+      saveTuningSettings();
+    });
+  }
+  if ($tuneDelay) {
+    $tuneDelay.value = String(tuning.delayMul);
+    $tuneDelay.addEventListener('input', () => {
+      tuning.delayMul = Number($tuneDelay.value);
+      refreshTuningUiLabels();
+      saveTuningSettings();
+    });
+  }
+  if ($tuneDamage) {
+    $tuneDamage.value = String(tuning.damageMul);
+    $tuneDamage.addEventListener('input', () => {
+      tuning.damageMul = Number($tuneDamage.value);
+      refreshTuningUiLabels();
+      saveTuningSettings();
+    });
+  }
+  if ($btnTunePresetNormal) $btnTunePresetNormal.addEventListener('click', () => applyTuningPreset('normal'));
+  if ($btnTunePresetHard) $btnTunePresetHard.addEventListener('click', () => applyTuningPreset('hard'));
+  refreshTuningUiLabels();
 }
 
 function initSettingsMenu() {
@@ -996,25 +1077,40 @@ function spawnEnemy(x,z){
 spawnEnemy(4, -2);
 spawnEnemy(-6, -8);
 spawnEnemy(6, 8);
-mission.targetKills = enemies.length * WAVE_CONFIGS.length;
+// targetKills is recalculated by deployWave based on tuning density.
+
+function getActiveEnemiesPerWave() {
+  return THREE.MathUtils.clamp(Math.round(enemies.length * tuning.density), 1, enemies.length);
+}
 
 function deployWave(waveIndex) {
   const cfg = WAVE_CONFIGS[Math.min(waveIndex, WAVE_CONFIGS.length - 1)];
   const layout = cfg.spawns;
+  const activeCount = getActiveEnemiesPerWave();
+
   for (let i = 0; i < enemies.length; i++) {
     const e = enemies[i];
+    if (i >= activeCount) {
+      e.hp = 0;
+      e.dead = true;
+      e.mesh.scale.setScalar(0.001);
+      continue;
+    }
+
     const [x, z] = layout[i % layout.length];
     e.hp = 3;
     e.dead = false;
     e.t = Math.random() * 10;
     e.hitCd = 0;
-    e.waveMoveMul = cfg.moveMul;
-    e.waveDamageMul = cfg.damageMul;
+    e.waveMoveMul = cfg.moveMul * tuning.damageMul;
+    e.waveDamageMul = cfg.damageMul * tuning.damageMul;
     e.spawn.set(x, 1.4, z);
     e.base.set(x, 1.4, z);
     e.mesh.scale.setScalar(1);
     e.mesh.position.copy(e.spawn);
   }
+
+  mission.targetKills = activeCount * WAVE_CONFIGS.length;
 }
 
 function resetEnemies() {
@@ -1053,7 +1149,7 @@ function updateEnemies(dt, now){
   const hasNextWave = currentWaveIndex < (WAVE_CONFIGS.length - 1);
   if (mission.phase === 'playing' && aliveCount === 0 && hasNextWave && pendingWaveIndex == null && mission.kills < mission.targetKills) {
     pendingWaveIndex = currentWaveIndex + 1;
-    pendingWaveDelay = WAVE_CONFIGS[pendingWaveIndex].delay + runTelemetry.balanceWaveDelayBonus;
+    pendingWaveDelay = (WAVE_CONFIGS[pendingWaveIndex].delay * tuning.delayMul) + runTelemetry.balanceWaveDelayBonus;
     if ($tip) {
       $tip.style.display = 'block';
       $tip.textContent = `Reagrupando drones… próxima oleada en ${pendingWaveDelay.toFixed(1)}s`;
@@ -1125,6 +1221,7 @@ initMoveAxisToggles();
 initCalibControl();
 applyConfigButtonsVisibility();
 initSettingsMenu();
+initTuningPanel();
 addEventListener('click', () => { if (isTouch) { $tip && ($tip.style.display = 'none'); } });
 addEventListener('touchstart', () => { $tip && ($tip.style.display = 'none'); ensureAudio(); }, { passive: true });
 
