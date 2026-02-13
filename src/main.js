@@ -168,6 +168,11 @@ scene.add(zoneCore);
 addWall(-6, 0.8, 16, 12, 1.6, 0.8, metalMat); // cuello ruta norte
 addWall(10, 0.8, 20, 8, 1.6, 0.8, metalMat); // lateral ruta faro
 
+const routeMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.22 });
+addBox(-10, 0.04, 8, 16, 0.08, 2.2, routeMat);   // ruta spawn -> núcleo
+addBox(-2, 0.04, 14, 14, 0.08, 2.2, routeMat);   // ruta núcleo -> norte
+addBox(3, 0.04, 20, 10, 0.08, 2.2, routeMat);    // ruta norte -> faro
+
 addBox(
   0,
   3.0,
