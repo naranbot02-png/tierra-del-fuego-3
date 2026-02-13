@@ -12,6 +12,7 @@ export function createMissionState({ targetKills = 3, extractionRadius }) {
     timeLeft: 75,
     phase: 'prep', // prep | playing | result
     result: null, // win | lose | null
+    lastLoseReason: null, // hp | time | null
     prepDuration: 2.8,
     prepLeft: 2.8,
     extractionRadius,
@@ -47,6 +48,7 @@ export function resetMissionState(mission) {
   mission.timeLeft = mission.timeLimit;
   mission.phase = 'prep';
   mission.result = null;
+  mission.lastLoseReason = null;
   mission.prepLeft = mission.prepDuration;
   mission.extractionProgress = 0;
   mission.extractionReady = false;

@@ -94,9 +94,15 @@ export function renderHudText({ mission, hp, isTouch, threat, sprinting = false,
         ? `Drones ${mission.kills}/${mission.targetKills} · ${threatShort}`
         : `Drones derribados: ${mission.kills}/${mission.targetKills} · Amenaza ${threatLabel}`;
     } else {
-      missionObjectiveEl.textContent = mission.result === 'win'
-        ? (mobileCopy ? 'Zona asegurada' : 'Resultado: zona asegurada')
-        : (mobileCopy ? 'Sin tiempo/energía' : 'Resultado: sin tiempo o sin energía');
+      if (mission.result === 'win') {
+        missionObjectiveEl.textContent = mobileCopy ? 'Zona asegurada' : 'Resultado: zona asegurada';
+      } else if (mission.lastLoseReason === 'hp') {
+        missionObjectiveEl.textContent = mobileCopy ? 'Sin energía' : 'Resultado: sin energía';
+      } else if (mission.lastLoseReason === 'time') {
+        missionObjectiveEl.textContent = mobileCopy ? 'Sin tiempo' : 'Resultado: sin tiempo';
+      } else {
+        missionObjectiveEl.textContent = mobileCopy ? 'Sin tiempo/energía' : 'Resultado: sin tiempo o sin energía';
+      }
     }
   }
 

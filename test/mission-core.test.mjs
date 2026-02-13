@@ -114,6 +114,7 @@ test('ramas terminales: mission-win y mission-lose', () => {
   });
   assert.equal(missionLose.phase, 'result');
   assert.equal(missionLose.result, 'lose');
+  assert.equal(missionLose.lastLoseReason, 'time');
   const loseEvent = loseStep.events.find((e) => e.type === 'mission-lose');
   assert.ok(loseEvent);
   assert.equal(loseEvent.reason, 'time');
@@ -132,4 +133,5 @@ test('ramas terminales: mission-win y mission-lose', () => {
   const loseHpEvent = loseHpStep.events.find((e) => e.type === 'mission-lose');
   assert.ok(loseHpEvent);
   assert.equal(loseHpEvent.reason, 'hp');
+  assert.equal(missionLoseHp.lastLoseReason, 'hp');
 });

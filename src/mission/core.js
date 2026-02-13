@@ -90,6 +90,7 @@ export function stepMissionCore({ mission, feedbackFlags, dt, playerHp, insideEx
     mission.phase = 'result';
     mission.result = 'lose';
     const reason = playerHp <= 0 ? 'hp' : 'time';
+    mission.lastLoseReason = reason;
     events.push({ type: 'mission-lose', reason });
   }
 
