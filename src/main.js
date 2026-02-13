@@ -1984,7 +1984,11 @@ function updateExtractionIndicator() {
 
   const active = mission.phase === 'playing' && mission.extractionReady;
   $extractIndicator.classList.toggle('show', active);
-  if (!active) return;
+  if (!active) {
+    $extractIndicator.style.transform = 'translateX(-50%) scale(1)';
+    $extractIndicator.style.borderColor = 'rgba(103,232,249,.38)';
+    return;
+  }
 
   const dx = EXTRACTION_POINT.x - state.pos.x;
   const dz = EXTRACTION_POINT.y - state.pos.z;
@@ -1993,6 +1997,8 @@ function updateExtractionIndicator() {
   if (mission.extractionInside) {
     const pct = Math.round((mission.extractionProgress / mission.extractionDuration) * 100);
     $extractIndicator.classList.add('extract-locked');
+    $extractIndicator.style.transform = 'translateX(-50%) scale(1.03)';
+    $extractIndicator.style.borderColor = 'rgba(34,197,94,.5)';
     $extractArrow.textContent = '✓';
     $extractArrow.style.transform = 'translateY(-1px) rotate(0deg)';
     $extractArrow.style.color = '#22d3ee';
@@ -2009,18 +2015,27 @@ function updateExtractionIndicator() {
   const clampedDelta = THREE.MathUtils.clamp(yawDelta, -1.2, 1.2);
   const rotationDeg = THREE.MathUtils.radToDeg(clampedDelta);
 
+  const align = 1 - THREE.MathUtils.clamp(Math.abs(yawDelta) / Math.PI, 0, 1);
+  const near = 1 - THREE.MathUtils.clamp(distance / 55, 0, 1);
+  const focusPulse = 0.5 + Math.sin(performance.now() * 0.012) * 0.5;
+  const scale = 1 + (near * 0.05 + align * 0.04) * (0.65 + focusPulse * 0.35);
+  $extractIndicator.style.transform = `translateX(-50%) scale(${scale.toFixed(3)})`;
+
   $extractArrow.textContent = '▲';
   $extractArrow.style.transform = `translateY(-1px) rotate(${rotationDeg.toFixed(1)}deg)`;
 
   if (distance > 40) {
     $extractArrow.style.color = '#f59e0b';
     $extractLabel.style.color = '#fbbf24';
+    $extractIndicator.style.borderColor = 'rgba(245,158,11,.42)';
   } else if (distance > 15) {
     $extractArrow.style.color = '#22d3ee';
     $extractLabel.style.color = '#67e8f9';
+    $extractIndicator.style.borderColor = 'rgba(34,211,238,.44)';
   } else {
     $extractArrow.style.color = '#4ade80';
     $extractLabel.style.color = '#86efac';
+    $extractIndicator.style.borderColor = 'rgba(74,222,128,.46)';
   }
 
   const graceLeft = Math.max(0, mission.extractionOutGraceLeft);
