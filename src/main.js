@@ -1530,6 +1530,9 @@ function updateMission(dt){
     extractionDistance,
     pendingWaveDelay,
     pendingWaveActive: pendingWaveIndex != null,
+    currentWaveIndex,
+    totalWaves: WAVE_CONFIGS.length,
+    currentWaveName: WAVE_CONFIGS[Math.min(currentWaveIndex, WAVE_CONFIGS.length - 1)]?.name || 'oleada',
     sprinting: movementTelemetry.sprinting,
     refs: {
       missionStatusEl: $missionStatus,
