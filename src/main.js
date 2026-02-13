@@ -173,6 +173,27 @@ addBox(-10, 0.04, 8, 16, 0.08, 2.2, routeMat);   // ruta spawn -> núcleo
 addBox(-2, 0.04, 14, 14, 0.08, 2.2, routeMat);   // ruta núcleo -> norte
 addBox(3, 0.04, 20, 10, 0.08, 2.2, routeMat);    // ruta norte -> faro
 
+// Mapa v2: identidad industrial + coberturas + landmarks
+const hazardMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.6, metalness: 0.2, emissive: 0x311904, emissiveIntensity: 0.18 });
+const darkPanelMat = new THREE.MeshStandardMaterial({ color: 0x1f2937, roughness: 0.75, metalness: 0.25 });
+
+// Landmark 1: torre de enfriamiento en núcleo
+addBox(-2, 3.2, 4, 3.4, 6.4, 3.4, darkPanelMat, { solid: true, colliderTag: 'cover' });
+addBox(-2, 6.8, 4, 4.4, 0.35, 4.4, hazardMat);
+
+// Landmark 2: depósitos industriales cerca del corredor norte
+addBox(12, 1.05, 14, 4.2, 2.1, 2.8, metalMat, { solid: true, colliderTag: 'cover' });
+addBox(16, 1.05, 17, 4.2, 2.1, 2.8, metalMat, { solid: true, colliderTag: 'cover' });
+addBox(14, 2.25, 15.5, 8.8, 0.2, 3.2, hazardMat);
+
+// Choke táctico: barreras en zig-zag hacia faro
+addWall(-4, 1.0, 18.2, 4.8, 2.0, 0.8, metalMat);
+addWall(2.5, 1.0, 20.5, 4.8, 2.0, 0.8, metalMat);
+
+// Coberturas de perímetro para alternar rutas
+addBox(-20, 1.0, -8, 3.2, 2.0, 1.2, darkPanelMat, { solid: true, colliderTag: 'cover' });
+addBox(22, 1.0, 6, 3.2, 2.0, 1.2, darkPanelMat, { solid: true, colliderTag: 'cover' });
+
 addBox(
   0,
   3.0,
