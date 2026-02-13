@@ -84,6 +84,11 @@ export function stepMissionCore({ mission, feedbackFlags, dt, playerHp, insideEx
       events.push({ type: 'extraction-grace-expired' });
     }
 
+    const extractionProgressLostNow = hadProgress && mission.extractionProgress <= 0;
+    if (extractionProgressLostNow) {
+      events.push({ type: 'extraction-progress-lost' });
+    }
+
     if (!wasInside && mission.extractionInside) {
       // Al reingresar, rearmamos la alerta para una próxima salida crítica.
       feedbackFlags.warnedGraceCritical = false;

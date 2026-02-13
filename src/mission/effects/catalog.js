@@ -39,6 +39,11 @@ export const MISSION_EFFECTS_CATALOG = {
       durationMobileMs: 1100,
       priority: MISSION_TIP_PRIORITY.CRITICAL,
     },
+    'extraction-progress-lost': {
+      text: 'Progreso de extracción perdido. Reingresá al faro para reiniciar el enlace.',
+      durationMobileMs: 1150,
+      priority: MISSION_TIP_PRIORITY.CRITICAL,
+    },
     'mission-win': {
       text: 'Extracción confirmada. R para reiniciar.',
       persistent: true,
@@ -70,6 +75,10 @@ export const MISSION_EFFECTS_CATALOG = {
     'extraction-entered': [{ kind: 'beep', params: { freq: 740, duration: 0.05, type: 'triangle', gain: 0.024 } }],
     'extraction-grace-critical': [{ kind: 'beep', params: { freq: 300, duration: 0.06, type: 'sawtooth', gain: 0.03 } }],
     'extraction-grace-expired': [{ kind: 'beep', params: { freq: 240, duration: 0.08, type: 'sawtooth', gain: 0.028 } }],
+    'extraction-progress-lost': [
+      { kind: 'beep', params: { freq: 220, duration: 0.1, type: 'sawtooth', gain: 0.028 } },
+      { kind: 'beep', delayMs: 90, params: { freq: 180, duration: 0.12, type: 'sawtooth', gain: 0.026 } },
+    ],
     'mission-win': [{ kind: 'sfx', name: 'win' }],
     'mission-lose': [{ kind: 'sfx', name: 'lose' }],
   },

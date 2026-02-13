@@ -85,6 +85,27 @@ test('hold/grace: alerta crítica antes de expirar y luego decae progreso', () =
   assert.ok(expiredStep.events.some((e) => e.type === 'extraction-grace-expired'));
 });
 
+test('emite extraction-progress-lost cuando se vacía el progreso de extracción', () => {
+  const mission = createMissionState({ targetKills: 3, extractionRadius: 6.5 });
+  const feedbackFlags = createFeedbackFlags();
+
+  mission.phase = 'playing';
+  mission.extractionReady = true;
+  mission.extractionProgress = 0.2;
+  mission.extractionOutGraceLeft = 0;
+
+  const { events } = stepMissionCore({
+    mission,
+    feedbackFlags,
+    dt: 0.35,
+    playerHp: 100,
+    insideExtractionZone: false,
+  });
+
+  assert.equal(mission.extractionProgress, 0);
+  assert.ok(events.some((e) => e.type === 'extraction-progress-lost'));
+});
+
 test('emite warn-threat-2 y warn-threat-3 en sus umbrales', () => {
   const mission = createMissionState({ targetKills: 3, extractionRadius: 6.5 });
   const feedbackFlags = createFeedbackFlags();
