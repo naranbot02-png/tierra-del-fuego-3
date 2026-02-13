@@ -29,6 +29,11 @@ export const MISSION_EFFECTS_CATALOG = {
       priority: MISSION_TIP_PRIORITY.HIGH,
       hideWhen: (mission) => mission.phase !== 'playing' || !mission.extractionReady,
     },
+    'extraction-grace-critical': {
+      text: '¡Volvé al faro ya! Cobertura casi agotada.',
+      durationMobileMs: 950,
+      priority: MISSION_TIP_PRIORITY.CRITICAL,
+    },
     'extraction-grace-expired': {
       text: 'Se perdió la cobertura del faro: la extracción cae.',
       durationMobileMs: 1100,
@@ -63,6 +68,7 @@ export const MISSION_EFFECTS_CATALOG = {
       { kind: 'beep', delayMs: 65, params: { freq: 920, duration: 0.07, type: 'triangle', gain: 0.028 } },
     ],
     'extraction-entered': [{ kind: 'beep', params: { freq: 740, duration: 0.05, type: 'triangle', gain: 0.024 } }],
+    'extraction-grace-critical': [{ kind: 'beep', params: { freq: 300, duration: 0.06, type: 'sawtooth', gain: 0.03 } }],
     'extraction-grace-expired': [{ kind: 'beep', params: { freq: 240, duration: 0.08, type: 'sawtooth', gain: 0.028 } }],
     'mission-win': [{ kind: 'sfx', name: 'win' }],
     'mission-lose': [{ kind: 'sfx', name: 'lose' }],
@@ -72,5 +78,6 @@ export const MISSION_EFFECTS_CATALOG = {
     'warn-low-hp': [20, 60, 20],
     'extraction-ready': 18,
     'extraction-entered': 12,
+    'extraction-grace-critical': [12, 40, 12],
   },
 };

@@ -23,7 +23,7 @@ test('transición a extracción cuando kills alcanzan target', () => {
   assert.ok(events.some((e) => e.type === 'extraction-ready'));
 });
 
-test('hold/grace: fuera del faro mantiene y luego decae progreso', () => {
+test('hold/grace: alerta crítica antes de expirar y luego decae progreso', () => {
   const mission = createMissionState({ targetKills: 3, extractionRadius: 6.5 });
   const feedbackFlags = createFeedbackFlags();
 
@@ -43,17 +43,28 @@ test('hold/grace: fuera del faro mantiene y luego decae progreso', () => {
   assert.equal(mission.extractionProgress, 1);
   assert.equal(mission.extractionOutGraceLeft, 0.3);
 
-  const { events } = stepMissionCore({
+  const criticalStep = stepMissionCore({
     mission,
     feedbackFlags,
-    dt: 0.4,
+    dt: 0.11,
+    playerHp: 100,
+    insideExtractionZone: false,
+  });
+
+  assert.ok(criticalStep.events.some((e) => e.type === 'extraction-grace-critical'));
+  assert.ok(!criticalStep.events.some((e) => e.type === 'extraction-grace-expired'));
+
+  const expiredStep = stepMissionCore({
+    mission,
+    feedbackFlags,
+    dt: 0.3,
     playerHp: 100,
     insideExtractionZone: false,
   });
 
   assert.equal(mission.extractionOutGraceLeft, 0);
   assert.ok(mission.extractionProgress < 1);
-  assert.ok(events.some((e) => e.type === 'extraction-grace-expired'));
+  assert.ok(expiredStep.events.some((e) => e.type === 'extraction-grace-expired'));
 });
 
 test('emite warn-threat-2 y warn-threat-3 en sus umbrales', () => {

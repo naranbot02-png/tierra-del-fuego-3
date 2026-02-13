@@ -69,6 +69,16 @@ export function stepMissionCore({ mission, feedbackFlags, dt, playerHp, insideEx
     mission.extractionInside = extractionStep.inside;
     mission.extractionOutGraceLeft = extractionStep.outGraceLeft;
 
+    const graceCriticalNow = !mission.extractionInside
+      && hadProgress
+      && mission.extractionOutGraceLeft > 0
+      && mission.extractionOutGraceLeft <= 0.2
+      && !feedbackFlags.warnedGraceCritical;
+    if (graceCriticalNow) {
+      feedbackFlags.warnedGraceCritical = true;
+      events.push({ type: 'extraction-grace-critical' });
+    }
+
     const graceExpiredNow = prevGraceLeft > 0 && mission.extractionOutGraceLeft <= 0;
     if (graceExpiredNow && hadProgress && !mission.extractionInside) {
       events.push({ type: 'extraction-grace-expired' });

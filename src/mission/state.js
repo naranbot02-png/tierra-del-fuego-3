@@ -32,6 +32,7 @@ export function createFeedbackFlags() {
     warnedLowHp: false,
     warnedThreat2: false,
     warnedThreat3: false,
+    warnedGraceCritical: false,
   };
 }
 
@@ -41,6 +42,7 @@ export function resetFeedbackFlags(flags) {
   flags.warnedLowHp = false;
   flags.warnedThreat2 = false;
   flags.warnedThreat3 = false;
+  flags.warnedGraceCritical = false;
 }
 
 export function resetMissionState(mission) {
