@@ -96,23 +96,33 @@ sun.position.set(10, 18, 6);
 scene.add(sun);
 
 // --- World
-const groundMat = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 1.0 });
-const iceMat = new THREE.MeshStandardMaterial({ color: 0x25314f, roughness: 0.8, metalness: 0.05 });
+const texLoader = new THREE.TextureLoader();
+function loadTiledTexture(path, rx, ry, anisotropy = 2) {
+  const t = texLoader.load(path);
+  t.wrapS = THREE.RepeatWrapping;
+  t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(rx, ry);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = anisotropy;
+  return t;
+}
 
-const wallTexture = new THREE.TextureLoader().load('./assets/wall-brick.jpg');
-wallTexture.wrapS = THREE.RepeatWrapping;
-wallTexture.wrapT = THREE.RepeatWrapping;
-wallTexture.repeat.set(5, 2.2);
-wallTexture.colorSpace = THREE.SRGBColorSpace;
-wallTexture.anisotropy = 4;
+const txAsphalt = loadTiledTexture('./assets/textures/asphalt_01_diff_2k.jpg', 26, 26, 2);
+const txPaintedShutter = loadTiledTexture('./assets/textures/painted_metal_shutter_diff_2k.jpg', 7, 2.8, 3);
+const txRustyMetal = loadTiledTexture('./assets/textures/rusty_metal_diff_2k.jpg', 5, 2.5, 3);
+const txMetalPlate = loadTiledTexture('./assets/textures/metal_plate_diff_2k.jpg', 6, 6, 3);
+const txConcrete = loadTiledTexture('./assets/textures/concrete_floor_diff_2k.jpg', 8, 8, 2);
+
+const groundMat = new THREE.MeshStandardMaterial({ color: 0xffffff, map: txAsphalt, roughness: 0.96, metalness: 0.04 });
+const iceMat = new THREE.MeshStandardMaterial({ color: 0x6b7280, map: txConcrete, roughness: 0.85, metalness: 0.02 });
 
 const metalMat = new THREE.MeshStandardMaterial({
-  color: 0xffffff,
-  map: wallTexture,
-  roughness: 0.88,
-  metalness: 0.02,
+  color: 0xe2e8f0,
+  map: txPaintedShutter,
+  roughness: 0.78,
+  metalness: 0.18,
 });
-const lightMat = new THREE.MeshStandardMaterial({ color: 0xcbd5e1, roughness: 0.2, metalness: 0.1, emissive: 0x0b1220, emissiveIntensity: 0.35 });
+const lightMat = new THREE.MeshStandardMaterial({ color: 0xcbd5e1, map: txMetalPlate, roughness: 0.2, metalness: 0.1, emissive: 0x0b1220, emissiveIntensity: 0.35 });
 
 const ground = new THREE.Mesh(new THREE.PlaneGeometry(240, 240), groundMat);
 ground.rotation.x = -Math.PI / 2;
@@ -180,14 +190,14 @@ scene.add(zoneCore);
 addWall(-6, 0.8, 16, 12, 1.6, 0.8, metalMat); // cuello ruta norte
 addWall(10, 0.8, 20, 8, 1.6, 0.8, metalMat); // lateral ruta faro
 
-const routeMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.22 });
+const routeMat = new THREE.MeshBasicMaterial({ color: 0x8ecae6, map: txConcrete, transparent: true, opacity: 0.22 });
 addBox(-10, 0.04, 8, 16, 0.08, 2.2, routeMat);   // ruta spawn -> núcleo
 addBox(-2, 0.04, 14, 14, 0.08, 2.2, routeMat);   // ruta núcleo -> norte
 addBox(3, 0.04, 20, 10, 0.08, 2.2, routeMat);    // ruta norte -> faro
 
 // Mapa v2: identidad industrial + coberturas + landmarks
-const hazardMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.6, metalness: 0.2, emissive: 0x311904, emissiveIntensity: 0.18 });
-const darkPanelMat = new THREE.MeshStandardMaterial({ color: 0x1f2937, roughness: 0.75, metalness: 0.25 });
+const hazardMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, map: txMetalPlate, roughness: 0.55, metalness: 0.26, emissive: 0x311904, emissiveIntensity: 0.18 });
+const darkPanelMat = new THREE.MeshStandardMaterial({ color: 0xffffff, map: txRustyMetal, roughness: 0.72, metalness: 0.22 });
 
 // Landmark 1: torre de enfriamiento en núcleo
 addBox(-2, 3.2, 4, 3.4, 6.4, 3.4, darkPanelMat, { solid: true, colliderTag: 'cover' });
