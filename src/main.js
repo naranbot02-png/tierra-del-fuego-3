@@ -83,16 +83,16 @@ renderer.toneMappingExposure = isTouch ? 1.15 : 1.2;
 document.body.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x09111d);
-scene.fog = new THREE.Fog(0x09111d, 20, 115);
+scene.background = new THREE.Color(0x8696a6);
+scene.fog = new THREE.Fog(0x7f8fa0, 24, 128);
 
 const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.1, 250);
 
 // --- Lights
-scene.add(new THREE.AmbientLight(0xbcd7ff, 0.42));
-const hemi = new THREE.HemisphereLight(0x67a7ff, 0x0b1324, 0.95);
+scene.add(new THREE.AmbientLight(0xc9d7e6, 0.5));
+const hemi = new THREE.HemisphereLight(0xaec3d7, 0x22303a, 0.9);
 scene.add(hemi);
-const sun = new THREE.DirectionalLight(0xbcd8ff, 1.22);
+const sun = new THREE.DirectionalLight(0xd6e2ef, 0.92);
 sun.position.set(10, 18, 6);
 scene.add(sun);
 
@@ -135,6 +135,41 @@ const lightMat = new THREE.MeshStandardMaterial({ color: 0xcdd9e8, map: txBlueMe
 const ground = new THREE.Mesh(new THREE.PlaneGeometry(240, 240), groundMat);
 ground.rotation.x = -Math.PI / 2;
 scene.add(ground);
+
+// Backdrop austral: mar frío + cordillera nevada + costa pedregosa (low-cost)
+const seaPlane = new THREE.Mesh(
+  new THREE.PlaneGeometry(260, 90),
+  new THREE.MeshBasicMaterial({ color: 0x4b6477, transparent: true, opacity: 0.42 })
+);
+seaPlane.rotation.x = -Math.PI / 2;
+seaPlane.position.set(0, 0.0, -86);
+scene.add(seaPlane);
+
+const coastBand = new THREE.Mesh(
+  new THREE.PlaneGeometry(260, 16),
+  new THREE.MeshBasicMaterial({ color: 0x667786, transparent: true, opacity: 0.35 })
+);
+coastBand.rotation.x = -Math.PI / 2;
+coastBand.position.set(0, 0.02, -47);
+scene.add(coastBand);
+
+const mountainLine = new THREE.Group();
+const mountainMat = new THREE.MeshBasicMaterial({ color: 0x586674, transparent: true, opacity: 0.78 });
+const snowCapMat = new THREE.MeshBasicMaterial({ color: 0xd7e2eb, transparent: true, opacity: 0.72 });
+for (let i = 0; i < 9; i++) {
+  const w = 30 + (i % 3) * 8;
+  const h = 18 + (i % 4) * 5;
+  const peak = new THREE.Mesh(new THREE.ConeGeometry(w * 0.5, h, 3), mountainMat);
+  peak.position.set(-120 + i * 30, 9 + h * 0.5, -118 - (i % 2) * 6);
+  peak.rotation.y = (i * 0.4);
+  mountainLine.add(peak);
+
+  const snow = new THREE.Mesh(new THREE.ConeGeometry(w * 0.18, h * 0.28, 3), snowCapMat);
+  snow.position.set(peak.position.x, peak.position.y + h * 0.25, peak.position.z);
+  snow.rotation.y = peak.rotation.y;
+  mountainLine.add(snow);
+}
+scene.add(mountainLine);
 
 const staticColliders = [];
 
@@ -2007,6 +2042,10 @@ function tick(){
   updateTacticalAudio(dt);
   updateBeaconState(now);
   updateExtractionIndicator();
+
+  const seaPulse = 0.5 + Math.sin(now * 0.0009) * 0.5;
+  seaPlane.material.opacity = 0.34 + seaPulse * 0.12;
+  coastBand.material.opacity = 0.24 + seaPulse * 0.1;
 
   const canShoot = mission.phase === 'playing';
   const wantShoot = canShoot && ((!isTouch && pointerLocked && (keys.has('KeyF'))) || state.fire || (!isTouch && pointerLocked && mouseDown));
