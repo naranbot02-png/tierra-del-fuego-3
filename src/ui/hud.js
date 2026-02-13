@@ -130,6 +130,11 @@ export function renderHudText({ mission, hp, isTouch, threat, extractionDistance
         missionTimerEl.textContent = mobileCopy
           ? `${timeCompact} · ${threatShort}${inGrace ? ` · ${graceLeft.toFixed(1)}s` : ''}${sprintTag}`
           : `Tiempo: ${timeCompact} · Amenaza ${threatLabel}${graceTag}${sprintTag}`;
+      } else if (pendingWaveActive) {
+        const waveEta = Math.max(0, pendingWaveDelay).toFixed(1);
+        missionTimerEl.textContent = mobileCopy
+          ? `⌛ ${waveEta}s · ${timeCompact}${sprintTag}`
+          : `Próx oleada: ${waveEta}s · Tiempo: ${timeCompact}${sprintTag}`;
       } else {
         missionTimerEl.textContent = mobileCopy ? `${timeCompact}${sprintTag}` : `Tiempo: ${timeCompact}${sprintTag}`;
       }
