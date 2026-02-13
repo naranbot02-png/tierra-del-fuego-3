@@ -712,6 +712,7 @@ const COLLISION_AXIS_EPS = 1e-8;
 const COLLISION_MAX_SLIDES = 4;
 
 const MOVE_SPEED = 5.6;
+const SPRINT_MULTIPLIER = 1.27;
 const WORLD_UP = new THREE.Vector3(0, 1, 0);
 const tempForward = new THREE.Vector3();
 const tempRight = new THREE.Vector3();
@@ -775,8 +776,13 @@ function intentToWorldDelta(intentX, intentY, dt, speed = MOVE_SPEED) {
   return { worldX, worldZ };
 }
 
+function isSprinting() {
+  return mission.phase === 'playing' && (keys.has('ShiftLeft') || keys.has('ShiftRight'));
+}
+
 function applyMovementFromIntent(intentX, intentY, dt) {
-  const { worldX, worldZ } = intentToWorldDelta(intentX, intentY, dt);
+  const speed = isSprinting() ? MOVE_SPEED * SPRINT_MULTIPLIER : MOVE_SPEED;
+  const { worldX, worldZ } = intentToWorldDelta(intentX, intentY, dt, speed);
   movePlayerWithCollisions(worldX, worldZ);
   return { worldX, worldZ };
 }
@@ -1064,7 +1070,9 @@ function updateMission(dt){
       mission.phase = 'playing';
       sfxStart();
       if ($tip) {
-        $tip.textContent = '¡Ventana táctica abierta! Neutralizá todos los drones.';
+        $tip.textContent = isTouch
+          ? '¡Ventana táctica abierta! Neutralizá todos los drones.'
+          : '¡Ventana táctica abierta! Shift = sprint táctico.';
         $tip.style.display = 'block';
         if (isTouch) setTimeout(() => { if (mission.phase === 'playing') $tip.style.display = 'none'; }, 1000);
       }
