@@ -56,6 +56,7 @@ const $btnTunePresetNormal = document.getElementById('btnTunePresetNormal');
 const $btnTunePresetHard = document.getElementById('btnTunePresetHard');
 const $btnTunePresetMobile = document.getElementById('btnTunePresetMobile');
 const $btnTunePresetDesktop = document.getElementById('btnTunePresetDesktop');
+const $btnTuneReset = document.getElementById('btnTuneReset');
 const $btnTuneSuggest = document.getElementById('btnTuneSuggest');
 const $tuneSuggestion = document.getElementById('tuneSuggestion');
 const $calibReadout = document.getElementById('calibReadout');
@@ -799,6 +800,15 @@ function initTuningPanel() {
   if ($btnTunePresetHard) $btnTunePresetHard.addEventListener('click', () => applyTuningPreset('hard'));
   if ($btnTunePresetMobile) $btnTunePresetMobile.addEventListener('click', () => applyTuningPreset('mobile'));
   if ($btnTunePresetDesktop) $btnTunePresetDesktop.addEventListener('click', () => applyTuningPreset('desktop'));
+  if ($btnTuneReset) {
+    $btnTuneReset.addEventListener('click', () => {
+      applyTuningPreset('normal', { reason: 'Tuning reseteado a baseline.' });
+      try {
+        localStorage.removeItem('tdf3_balance_wave_delay_bonus');
+        localStorage.removeItem('tdf3_recent_runs');
+      } catch {}
+    });
+  }
   if ($btnTuneSuggest) {
     $btnTuneSuggest.addEventListener('click', () => {
       const suggestion = computeSuggestedTuningFromRuns(readRecentRuns());
