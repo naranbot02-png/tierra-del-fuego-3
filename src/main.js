@@ -1219,7 +1219,8 @@ function updateExtractionIndicator() {
     $extractArrow.style.transform = 'translateY(-1px) rotate(0deg)';
     $extractArrow.style.color = '#22d3ee';
     $extractLabel.style.color = '#e2e8f0';
-    $extractLabel.textContent = `En faro ${pct}%`;
+    const eta = Math.max(0, mission.extractionDuration - mission.extractionProgress);
+    $extractLabel.textContent = `En faro ${pct}% · ${eta.toFixed(1)}s`;
     return;
   }
 
