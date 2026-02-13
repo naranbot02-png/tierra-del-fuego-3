@@ -5,6 +5,7 @@ import {
   getKeyboardIntentAxes,
   getTouchIntentAxes,
   normalizeIntentAxes,
+  applyIntentAxisInversion,
   isKeyboardSprinting,
   isTouchAutoSprinting,
 } from './input/intent.js';
@@ -38,6 +39,10 @@ const $btnJump = document.getElementById('btnJump');
 const $btnLayout = document.getElementById('btnLayout');
 const $btnHand = document.getElementById('btnHand');
 const $btnLook = document.getElementById('btnLook');
+const $btnInvX = document.getElementById('btnInvX');
+const $btnInvY = document.getElementById('btnInvY');
+const $btnCalib = document.getElementById('btnCalib');
+const $calibReadout = document.getElementById('calibReadout');
 const $btnRestart = document.getElementById('btnRestart');
 const $extractIndicator = document.getElementById('extractIndicator');
 const $extractArrow = document.getElementById('extractArrow');
@@ -299,8 +304,15 @@ const inputDebug = {
   lastLogAt: 0,
 };
 
+const moveAxisSettings = {
+  invertX: false,
+  invertY: false,
+};
+
 function setInputDebugEnabled(enabled) {
   inputDebug.enabled = enabled;
+  if ($btnCalib) $btnCalib.textContent = `Calib: ${enabled ? 'On' : 'Off'}`;
+  if ($calibReadout) $calibReadout.style.display = enabled ? 'block' : 'none';
   if ($tip) {
     if (enabled) {
       $tip.style.display = 'block';
@@ -385,6 +397,48 @@ function initLookControl() {
       const currentIdx = LOOK_PRESETS.findIndex((p) => p.id === mobileLookPreset);
       const nextIdx = (currentIdx + 1) % LOOK_PRESETS.length;
       applyLookPreset(LOOK_PRESETS[nextIdx].id);
+    });
+  }
+}
+
+function updateMoveAxisButtons() {
+  if ($btnInvX) $btnInvX.textContent = `Move X: ${moveAxisSettings.invertX ? 'Invertido' : 'Normal'}`;
+  if ($btnInvY) $btnInvY.textContent = `Move Y: ${moveAxisSettings.invertY ? 'Invertido' : 'Normal'}`;
+}
+
+function initMoveAxisToggles() {
+  try {
+    moveAxisSettings.invertX = localStorage.getItem('tdf3_move_invert_x') === '1';
+    moveAxisSettings.invertY = localStorage.getItem('tdf3_move_invert_y') === '1';
+  } catch {}
+  updateMoveAxisButtons();
+
+  if ($btnInvX) {
+    $btnInvX.addEventListener('click', (e) => {
+      e.preventDefault();
+      moveAxisSettings.invertX = !moveAxisSettings.invertX;
+      try { localStorage.setItem('tdf3_move_invert_x', moveAxisSettings.invertX ? '1' : '0'); } catch {}
+      updateMoveAxisButtons();
+    });
+  }
+
+  if ($btnInvY) {
+    $btnInvY.addEventListener('click', (e) => {
+      e.preventDefault();
+      moveAxisSettings.invertY = !moveAxisSettings.invertY;
+      try { localStorage.setItem('tdf3_move_invert_y', moveAxisSettings.invertY ? '1' : '0'); } catch {}
+      updateMoveAxisButtons();
+    });
+  }
+}
+
+function initCalibControl() {
+  if ($btnCalib) {
+    $btnCalib.addEventListener('click', (e) => {
+      e.preventDefault();
+      setInputDebugEnabled(!inputDebug.enabled);
+      $btnCalib.textContent = `Calib: ${inputDebug.enabled ? 'On' : 'Off'}`;
+      if ($calibReadout) $calibReadout.style.display = inputDebug.enabled ? 'block' : 'none';
     });
   }
 }
@@ -699,6 +753,8 @@ showStory();
 initLayoutControl();
 initHandControl();
 initLookControl();
+initMoveAxisToggles();
+initCalibControl();
 addEventListener('click', () => { if (isTouch) { $tip && ($tip.style.display = 'none'); } });
 addEventListener('touchstart', () => { $tip && ($tip.style.display = 'none'); ensureAudio(); }, { passive: true });
 
@@ -743,6 +799,9 @@ function maybeLogInputDebug(now, intentX, intentY, worldX, worldZ) {
   if ($tip) {
     $tip.style.display = 'block';
     $tip.textContent = msg;
+  }
+  if ($calibReadout) {
+    $calibReadout.textContent = `intent(${intentX.toFixed(2)}, ${intentY.toFixed(2)}) · world(${worldX.toFixed(2)}, ${worldZ.toFixed(2)}) · yaw ${THREE.MathUtils.radToDeg(state.yaw).toFixed(1)}°`;
   }
 
   if (now - inputDebug.lastLogAt > 250) {
@@ -1079,7 +1138,8 @@ function updatePlayer(dt, now){
 
   const keyboardIntent = getKeyboardIntentAxes(keys);
   const touchIntent = getTouchIntentAxes(touch);
-  const intent = normalizeIntentAxes(keyboardIntent, touchIntent);
+  const rawIntent = normalizeIntentAxes(keyboardIntent, touchIntent);
+  const intent = applyIntentAxisInversion(rawIntent, moveAxisSettings);
   const { worldX, worldZ } = applyMovementFromIntent(intent.x, intent.y, dt);
   maybeLogInputDebug(now, intent.x, intent.y, worldX, worldZ);
 

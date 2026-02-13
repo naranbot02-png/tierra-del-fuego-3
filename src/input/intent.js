@@ -36,6 +36,13 @@ export function normalizeIntentAxes(...sources) {
   return { x, y };
 }
 
+export function applyIntentAxisInversion(intent, { invertX = false, invertY = false } = {}) {
+  return {
+    x: invertX ? -intent.x : intent.x,
+    y: invertY ? -intent.y : intent.y,
+  };
+}
+
 export function isKeyboardSprinting(keys, missionPhase) {
   return missionPhase === 'playing' && (keys.has('ShiftLeft') || keys.has('ShiftRight'));
 }

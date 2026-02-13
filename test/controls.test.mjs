@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeIntentAxes, getTouchIntentAxes } from '../src/input/intent.js';
+import { normalizeIntentAxes, getTouchIntentAxes, applyIntentAxisInversion } from '../src/input/intent.js';
 import { intentToWorldDelta } from '../src/movement/transform.js';
 
 test('normalizeIntentAxes clampa diagonal a magnitud <= 1', () => {
@@ -23,6 +23,14 @@ test('getTouchIntentAxes mapea up/down/left/right correctamente', () => {
   assert.equal(Math.abs(left.y), 0);
   assert.equal(right.x, 1);
   assert.equal(Math.abs(right.y), 0);
+});
+
+test('applyIntentAxisInversion aplica toggles X/Y', () => {
+  const base = { x: 0.6, y: -0.4 };
+  assert.deepEqual(applyIntentAxisInversion(base, { invertX: false, invertY: false }), { x: 0.6, y: -0.4 });
+  assert.deepEqual(applyIntentAxisInversion(base, { invertX: true, invertY: false }), { x: -0.6, y: -0.4 });
+  assert.deepEqual(applyIntentAxisInversion(base, { invertX: false, invertY: true }), { x: 0.6, y: 0.4 });
+  assert.deepEqual(applyIntentAxisInversion(base, { invertX: true, invertY: true }), { x: -0.6, y: 0.4 });
 });
 
 test('intentToWorldDelta respeta yaw 0/90/180/270 para forward/back/strafe', () => {
