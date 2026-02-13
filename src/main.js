@@ -182,6 +182,8 @@ const mission = {
   extractionProgress: 0,
   extractionReady: false,
   extractionInside: false,
+  extractionOutGraceDuration: 0.6,
+  extractionOutGraceLeft: 0.6,
 };
 
 const feedbackFlags = {
@@ -570,6 +572,7 @@ let shotPulseUntil = 0;
 let muzzleFlashUntil = 0;
 let shakeUntil = 0;
 let lastDamageAt = 0;
+const PLAYER_HURT_IFRAME_MS = 380;
 
 const hitMarker = document.createElement('div');
 hitMarker.style.position = 'fixed';
@@ -630,7 +633,7 @@ function resetEnemies() {
   }
 }
 
-function updateEnemies(dt){
+function updateEnemies(dt, now){
   const threat = getThreatLevel();
   for (const e of enemies){
     if (e.hp <= 0) continue;
@@ -641,10 +644,11 @@ function updateEnemies(dt){
     e.mesh.lookAt(state.pos.x, 1.4, state.pos.z);
 
     const dist = e.mesh.position.distanceTo(state.pos);
-    if (dist < 1.9 && e.hitCd <= 0 && mission.phase === 'playing') {
+    const globalHurtReady = (now - lastDamageAt) >= PLAYER_HURT_IFRAME_MS;
+    if (dist < 1.9 && e.hitCd <= 0 && globalHurtReady && mission.phase === 'playing') {
       state.hp = Math.max(0, state.hp - threat.damage);
       e.hitCd = threat.hitCooldown;
-      lastDamageAt = performance.now();
+      lastDamageAt = now;
       sfxDamage();
       if (isTouch && navigator.vibrate) navigator.vibrate(12);
     }
@@ -1027,6 +1031,7 @@ function resetMission(manual = false) {
   mission.extractionProgress = 0;
   mission.extractionReady = false;
   mission.extractionInside = false;
+  mission.extractionOutGraceLeft = mission.extractionOutGraceDuration;
   feedbackFlags.warned30 = false;
   feedbackFlags.warned15 = false;
   feedbackFlags.warnedLowHp = false;
@@ -1121,6 +1126,7 @@ function updateMission(dt){
       mission.extractionReady = true;
       mission.extractionProgress = 0;
       mission.extractionInside = false;
+      mission.extractionOutGraceLeft = mission.extractionOutGraceDuration;
       beep({ freq: 660, duration: 0.06, type: 'triangle', gain: 0.028 });
       setTimeout(() => beep({ freq: 920, duration: 0.07, type: 'triangle', gain: 0.028 }), 65);
       if (isTouch && navigator.vibrate) navigator.vibrate(18);
@@ -1135,17 +1141,25 @@ function updateMission(dt){
       const dx = state.pos.x - EXTRACTION_POINT.x;
       const dz = state.pos.z - EXTRACTION_POINT.y;
       const inside = Math.hypot(dx, dz) <= mission.extractionRadius;
+      const wasInside = mission.extractionInside;
 
-      if (inside) {
-        mission.extractionProgress = Math.min(mission.extractionDuration, mission.extractionProgress + dt);
-        if (!mission.extractionInside) {
-          mission.extractionInside = true;
-          beep({ freq: 740, duration: 0.05, type: 'triangle', gain: 0.024 });
-          if (isTouch && navigator.vibrate) navigator.vibrate(12);
-        }
-      } else {
-        mission.extractionInside = false;
-        mission.extractionProgress = Math.max(0, mission.extractionProgress - dt * 0.72);
+      const extractionStep = stepExtractionProgress({
+        progress: mission.extractionProgress,
+        inside,
+        dt,
+        duration: mission.extractionDuration,
+        decayRate: 0.72,
+        outGraceLeft: mission.extractionOutGraceLeft,
+        outGraceDuration: mission.extractionOutGraceDuration,
+      });
+
+      mission.extractionProgress = extractionStep.progress;
+      mission.extractionInside = extractionStep.inside;
+      mission.extractionOutGraceLeft = extractionStep.outGraceLeft;
+
+      if (!wasInside && mission.extractionInside) {
+        beep({ freq: 740, duration: 0.05, type: 'triangle', gain: 0.024 });
+        if (isTouch && navigator.vibrate) navigator.vibrate(12);
       }
 
       if (mission.extractionProgress >= mission.extractionDuration) {
@@ -1338,7 +1352,7 @@ function tick(){
   const now = performance.now();
 
   updatePlayer(dt, now);
-  updateEnemies(dt);
+  updateEnemies(dt, now);
   updateMission(dt);
   updateBeaconState(now);
   updateExtractionIndicator();
