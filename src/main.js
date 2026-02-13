@@ -731,6 +731,7 @@ const COLLISION_MAX_SLIDES = 4;
 
 const MOVE_SPEED = 5.6;
 const SPRINT_MULTIPLIER = 1.27;
+const MOBILE_AUTO_SPRINT_THRESHOLD = 0.92;
 const WORLD_UP = new THREE.Vector3(0, 1, 0);
 const tempForward = new THREE.Vector3();
 const tempRight = new THREE.Vector3();
@@ -794,12 +795,18 @@ function intentToWorldDelta(intentX, intentY, dt, speed = MOVE_SPEED) {
   return { worldX, worldZ };
 }
 
-function isSprinting() {
+function isKeyboardSprinting() {
   return mission.phase === 'playing' && (keys.has('ShiftLeft') || keys.has('ShiftRight'));
 }
 
+function isTouchAutoSprinting(intentX, intentY) {
+  if (!isTouch || mission.phase !== 'playing') return false;
+  return Math.hypot(intentX, intentY) >= MOBILE_AUTO_SPRINT_THRESHOLD;
+}
+
 function applyMovementFromIntent(intentX, intentY, dt) {
-  const speed = isSprinting() ? MOVE_SPEED * SPRINT_MULTIPLIER : MOVE_SPEED;
+  const sprinting = isKeyboardSprinting() || isTouchAutoSprinting(intentX, intentY);
+  const speed = sprinting ? MOVE_SPEED * SPRINT_MULTIPLIER : MOVE_SPEED;
   const { worldX, worldZ } = intentToWorldDelta(intentX, intentY, dt, speed);
   movePlayerWithCollisions(worldX, worldZ);
   return { worldX, worldZ };
@@ -1090,7 +1097,7 @@ function updateMission(dt){
       sfxStart();
       if ($tip) {
         $tip.textContent = isTouch
-          ? '¡Ventana táctica abierta! Neutralizá todos los drones.'
+          ? '¡Ventana táctica abierta! Stick al máximo = sprint táctico.'
           : '¡Ventana táctica abierta! Shift = sprint táctico.';
         $tip.style.display = 'block';
         if (isTouch) setTimeout(() => { if (mission.phase === 'playing') $tip.style.display = 'none'; }, 1000);
