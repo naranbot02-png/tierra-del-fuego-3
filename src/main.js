@@ -151,6 +151,12 @@ const beacon = new THREE.Mesh(
   new THREE.SphereGeometry(0.9, 18, 12),
   new THREE.MeshStandardMaterial({ color: 0x67e8f9, emissive: 0x67e8f9, emissiveIntensity: 1.6 })
 );
+const beaconBeam = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.16, 1.15, 34, 20, 1, true),
+  new THREE.MeshBasicMaterial({ color: 0x67e8f9, transparent: true, opacity: 0.15, side: THREE.DoubleSide })
+);
+beaconBeam.position.set(0, 17, 24);
+scene.add(beaconBeam);
 beacon.position.set(0, 4.5, 24);
 scene.add(beacon);
 const beaconLight = new THREE.PointLight(0x67e8f9, 2.5, 45, 2);
@@ -1176,6 +1182,9 @@ function updateBeaconState(now) {
     extractionZone.scale.setScalar(1 + (1 - p) * 0.06);
     beacon.material.emissiveIntensity = baseGlow + 0.25 + p * 0.75;
     beaconLight.intensity = 2.8 + pulse * 0.9 + p * 1.1;
+    beaconBeam.visible = true;
+    beaconBeam.scale.set(1 + pulse * 0.05, 1, 1 + pulse * 0.05);
+    beaconBeam.material.opacity = 0.16 + pulse * 0.12 + p * 0.08;
     return;
   }
 
@@ -1184,6 +1193,9 @@ function updateBeaconState(now) {
   extractionZone.scale.setScalar(1);
   beacon.material.emissiveIntensity = baseGlow;
   beaconLight.intensity = 2.4 + pulse * 0.35;
+  beaconBeam.visible = mission.phase === 'playing';
+  beaconBeam.scale.set(1, 1, 1);
+  beaconBeam.material.opacity = 0.08 + pulse * 0.06;
 }
 
 function updateExtractionIndicator() {
