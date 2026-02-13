@@ -120,6 +120,8 @@ const txBrownFloorTiles = loadTiledTexture('./assets/library/textures/brown_floo
 const txBlackPaintedPlanks = loadTiledTexture('./assets/library/textures/black_painted_planks_diff_1k.jpg', 4.8, 4.8, 2); // 10
 const txBlueFloorTiles = loadTiledTexture('./assets/library/textures/blue_floor_tiles_01_diff_1k.jpg', 3.2, 3.2, 2); // 11
 const txBeamWall = loadTiledTexture('./assets/library/textures/beam_wall_01_diff_1k.jpg', 2.8, 2.8, 2); // 12
+const txSeaSurface = loadTiledTexture('./assets/library/textures/blue_floor_tiles_01_diff_1k.jpg', 10, 4, 1); // 13
+const txCoastRock = loadTiledTexture('./assets/library/textures/broken_wall_diff_1k.jpg', 12, 2, 1); // 14
 
 const groundMat = new THREE.MeshStandardMaterial({ color: 0xf3f7ff, map: txAsphalt, roughness: 0.93, metalness: 0.05 });
 const iceMat = new THREE.MeshStandardMaterial({ color: 0x8494a8, map: txBrushedConcrete, roughness: 0.84, metalness: 0.04 });
@@ -139,7 +141,7 @@ scene.add(ground);
 // Backdrop austral v2: mar frío + costa + cordillera en capas (low-cost)
 const seaPlane = new THREE.Mesh(
   new THREE.PlaneGeometry(280, 96),
-  new THREE.MeshBasicMaterial({ color: 0x4f697d, transparent: true, opacity: 0.4 })
+  new THREE.MeshBasicMaterial({ color: 0x4f697d, map: txSeaSurface, transparent: true, opacity: 0.4 })
 );
 seaPlane.rotation.x = -Math.PI / 2;
 seaPlane.position.set(0, 0.0, -88);
@@ -147,7 +149,7 @@ scene.add(seaPlane);
 
 const coastBand = new THREE.Mesh(
   new THREE.PlaneGeometry(280, 20),
-  new THREE.MeshBasicMaterial({ color: 0x6f7f8d, transparent: true, opacity: 0.34 })
+  new THREE.MeshBasicMaterial({ color: 0x6f7f8d, map: txCoastRock, transparent: true, opacity: 0.34 })
 );
 coastBand.rotation.x = -Math.PI / 2;
 coastBand.position.set(0, 0.02, -48);
@@ -2091,6 +2093,10 @@ function tick(){
   coastBand.material.opacity = 0.22 + seaPulse * 0.1;
   mistNear.material.opacity = 0.1 + mistPulse * 0.08;
   mistFar.material.opacity = 0.07 + mistPulse * 0.06;
+
+  txSeaSurface.offset.x = (now * 0.000015) % 1;
+  txSeaSurface.offset.y = (now * 0.00003) % 1;
+  txCoastRock.offset.x = (now * 0.00001) % 1;
 
   const canShoot = mission.phase === 'playing';
   const wantShoot = canShoot && ((!isTouch && pointerLocked && (keys.has('KeyF'))) || state.fire || (!isTouch && pointerLocked && mouseDown));
