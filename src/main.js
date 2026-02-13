@@ -194,6 +194,16 @@ addWall(2.5, 1.0, 20.5, 4.8, 2.0, 0.8, metalMat);
 addBox(-20, 1.0, -8, 3.2, 2.0, 1.2, darkPanelMat, { solid: true, colliderTag: 'cover' });
 addBox(22, 1.0, 6, 3.2, 2.0, 1.2, darkPanelMat, { solid: true, colliderTag: 'cover' });
 
+// Ruta riesgo/recompensa: rápida (expuesta) vs segura (coberturas)
+const fastRouteMat = new THREE.MeshBasicMaterial({ color: 0xef4444, transparent: true, opacity: 0.14 });
+const safeRouteMat = new THREE.MeshBasicMaterial({ color: 0x22c55e, transparent: true, opacity: 0.14 });
+addBox(8, 0.035, 10, 24, 0.07, 1.5, fastRouteMat);      // rápida y expuesta hacia faro
+addBox(-14, 0.035, 10, 10, 0.07, 1.5, safeRouteMat);    // segura (más larga)
+addBox(-18, 0.035, 16, 8, 0.07, 1.5, safeRouteMat);
+addBox(-10, 0.035, 22, 10, 0.07, 1.5, safeRouteMat);
+addBox(-16, 1.0, 12, 2.6, 2.0, 1.1, darkPanelMat, { solid: true, colliderTag: 'cover' });
+addBox(-12, 1.0, 18, 2.6, 2.0, 1.1, darkPanelMat, { solid: true, colliderTag: 'cover' });
+
 addBox(
   0,
   3.0,
@@ -255,6 +265,14 @@ for (let i=0;i<6;i++){
   const pt = new THREE.PointLight(0xa5f3fc, 0.8, 18, 2);
   pt.position.set(lx, 4.1, -14);
   scene.add(pt);
+}
+
+const objectiveGuideLights = [];
+for (const [gx, gz] of [[-8, 10], [-4, 14], [0, 18], [4, 21], [0, 24]]) {
+  const g = new THREE.PointLight(0x67e8f9, 0.2, 12, 2);
+  g.position.set(gx, 1.1, gz);
+  scene.add(g);
+  objectiveGuideLights.push(g);
 }
 
 // --- Player controller
@@ -891,6 +909,14 @@ document.body.appendChild(damageOverlay);
 
 const enemies = [];
 const enemyMat = new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.55, metalness: 0.25, emissive: 0x220808, emissiveIntensity: 0.35 });
+
+const ZONE_WAVE_LAYOUTS = [
+  [[-20, -4], [-6, -8], [8, -2]],      // perímetro
+  [[-2, 6], [10, 12], [-12, 10]],       // núcleo
+  [[6, 18], [-8, 20], [2, 24]],         // corredor/faro
+];
+let currentWaveIndex = 0;
+
 function spawnEnemy(x,z){
   const body = new THREE.Mesh(new THREE.SphereGeometry(0.45, 18, 12), enemyMat);
   body.position.set(x, 1.4, z);
@@ -903,23 +929,36 @@ function spawnEnemy(x,z){
 spawnEnemy(4, -2);
 spawnEnemy(-6, -8);
 spawnEnemy(6, 8);
-mission.targetKills = enemies.length;
+mission.targetKills = enemies.length * ZONE_WAVE_LAYOUTS.length;
 
-function resetEnemies() {
-  for (const e of enemies) {
+function deployWave(waveIndex) {
+  const layout = ZONE_WAVE_LAYOUTS[Math.min(waveIndex, ZONE_WAVE_LAYOUTS.length - 1)];
+  for (let i = 0; i < enemies.length; i++) {
+    const e = enemies[i];
+    const [x, z] = layout[i % layout.length];
     e.hp = 3;
     e.dead = false;
     e.t = Math.random() * 10;
     e.hitCd = 0;
+    e.spawn.set(x, 1.4, z);
+    e.base.set(x, 1.4, z);
     e.mesh.scale.setScalar(1);
     e.mesh.position.copy(e.spawn);
   }
 }
 
+function resetEnemies() {
+  currentWaveIndex = 0;
+  deployWave(currentWaveIndex);
+}
+
 function updateEnemies(dt, now){
   const threat = getThreatLevel(mission);
+  let aliveCount = 0;
+
   for (const e of enemies){
     if (e.hp <= 0) continue;
+    aliveCount += 1;
     e.t += dt * threat.moveMul;
     e.hitCd = Math.max(0, e.hitCd - dt);
     e.mesh.position.x = e.base.x + Math.sin(e.t*0.8)*1.3;
@@ -934,6 +973,18 @@ function updateEnemies(dt, now){
       lastDamageAt = now;
       sfxDamage();
       if (isTouch && navigator.vibrate) navigator.vibrate(12);
+    }
+  }
+
+  const hasNextWave = currentWaveIndex < (ZONE_WAVE_LAYOUTS.length - 1);
+  if (mission.phase === 'playing' && aliveCount === 0 && hasNextWave && mission.kills < mission.targetKills) {
+    currentWaveIndex += 1;
+    deployWave(currentWaveIndex);
+    if ($tip) {
+      const zoneName = currentWaveIndex === 1 ? 'núcleo' : 'corredor faro';
+      $tip.style.display = 'block';
+      $tip.textContent = `Nueva oleada detectada en ${zoneName}.`;
+      if (isTouch) setTimeout(() => { if (mission.phase === 'playing') $tip.style.display = 'none'; }, 900);
     }
   }
 }
@@ -1305,6 +1356,9 @@ function updateMission(dt){
 function updateBeaconState(now) {
   const pulse = 0.5 + Math.sin(now * 0.0075) * 0.5;
   const baseGlow = 1.35 + pulse * 0.2;
+
+  const guideTargetIntensity = (mission.phase === 'playing' && mission.extractionReady) ? (0.65 + pulse * 0.7) : 0.14;
+  for (const g of objectiveGuideLights) g.intensity = guideTargetIntensity;
 
   if (mission.phase === 'playing' && mission.extractionReady) {
     const p = THREE.MathUtils.clamp(mission.extractionProgress / mission.extractionDuration, 0, 1);
