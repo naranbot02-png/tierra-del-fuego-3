@@ -107,27 +107,27 @@ function loadTiledTexture(path, rx, ry, anisotropy = 2) {
   return t;
 }
 
-const txAsphalt = loadTiledTexture('./assets/library/textures/asphalt_01_diff_1k.jpg', 24, 24, 2); // 1
-const txAntiSlipConcrete = loadTiledTexture('./assets/library/textures/anti_slip_concrete_diff_1k.jpg', 10, 10, 2); // 2
-const txBoxMetalSheet = loadTiledTexture('./assets/library/textures/box_profile_metal_sheet_diff_1k.jpg', 7, 3.2, 3); // 3
-const txBlueMetalPlate = loadTiledTexture('./assets/library/textures/blue_metal_plate_diff_1k.jpg', 6, 6, 3); // 4
-const txBrushedConcrete = loadTiledTexture('./assets/library/textures/brushed_concrete_diff_1k.jpg', 9, 9, 2); // 5
-const txBrokenWall = loadTiledTexture('./assets/library/textures/broken_wall_diff_1k.jpg', 5, 2.5, 3); // 6
-const txBrickWall12 = loadTiledTexture('./assets/library/textures/brick_wall_12_diff_1k.jpg', 6, 3.0, 2); // 7
-const txBrickFloor003 = loadTiledTexture('./assets/library/textures/brick_floor_003_diff_1k.jpg', 10, 10, 2); // 8
-const txBrownFloorTiles = loadTiledTexture('./assets/library/textures/brown_floor_tiles_diff_1k.jpg', 8, 8, 2); // 9
-const txBlackPaintedPlanks = loadTiledTexture('./assets/library/textures/black_painted_planks_diff_1k.jpg', 6, 6, 2); // 10
+const txAsphalt = loadTiledTexture('./assets/library/textures/asphalt_01_diff_1k.jpg', 20, 20, 2); // 1
+const txAntiSlipConcrete = loadTiledTexture('./assets/library/textures/anti_slip_concrete_diff_1k.jpg', 8, 8, 2); // 2
+const txBoxMetalSheet = loadTiledTexture('./assets/library/textures/box_profile_metal_sheet_diff_1k.jpg', 6, 2.6, 3); // 3
+const txBlueMetalPlate = loadTiledTexture('./assets/library/textures/blue_metal_plate_diff_1k.jpg', 5, 5, 3); // 4
+const txBrushedConcrete = loadTiledTexture('./assets/library/textures/brushed_concrete_diff_1k.jpg', 7, 7, 2); // 5
+const txBrokenWall = loadTiledTexture('./assets/library/textures/broken_wall_diff_1k.jpg', 4.2, 2.2, 2); // 6
+const txBrickWall12 = loadTiledTexture('./assets/library/textures/brick_wall_12_diff_1k.jpg', 5, 2.6, 2); // 7
+const txBrickFloor003 = loadTiledTexture('./assets/library/textures/brick_floor_003_diff_1k.jpg', 8, 8, 2); // 8
+const txBrownFloorTiles = loadTiledTexture('./assets/library/textures/brown_floor_tiles_diff_1k.jpg', 6, 6, 2); // 9
+const txBlackPaintedPlanks = loadTiledTexture('./assets/library/textures/black_painted_planks_diff_1k.jpg', 4.8, 4.8, 2); // 10
 
-const groundMat = new THREE.MeshStandardMaterial({ color: 0xffffff, map: txAsphalt, roughness: 0.96, metalness: 0.04 });
-const iceMat = new THREE.MeshStandardMaterial({ color: 0x7b8798, map: txBrushedConcrete, roughness: 0.86, metalness: 0.03 });
+const groundMat = new THREE.MeshStandardMaterial({ color: 0xf3f7ff, map: txAsphalt, roughness: 0.93, metalness: 0.05 });
+const iceMat = new THREE.MeshStandardMaterial({ color: 0x8494a8, map: txBrushedConcrete, roughness: 0.84, metalness: 0.04 });
 
 const metalMat = new THREE.MeshStandardMaterial({
-  color: 0xe2e8f0,
+  color: 0xdbe6f2,
   map: txBoxMetalSheet,
-  roughness: 0.78,
-  metalness: 0.18,
+  roughness: 0.74,
+  metalness: 0.2,
 });
-const lightMat = new THREE.MeshStandardMaterial({ color: 0xcbd5e1, map: txBlueMetalPlate, roughness: 0.2, metalness: 0.1, emissive: 0x0b1220, emissiveIntensity: 0.35 });
+const lightMat = new THREE.MeshStandardMaterial({ color: 0xcdd9e8, map: txBlueMetalPlate, roughness: 0.28, metalness: 0.14, emissive: 0x0b1220, emissiveIntensity: 0.28 });
 
 const ground = new THREE.Mesh(new THREE.PlaneGeometry(240, 240), groundMat);
 ground.rotation.x = -Math.PI / 2;
@@ -195,14 +195,14 @@ scene.add(zoneCore);
 addWall(-6, 0.8, 16, 12, 1.6, 0.8, metalMat); // cuello ruta norte
 addWall(10, 0.8, 20, 8, 1.6, 0.8, metalMat); // lateral ruta faro
 
-const routeMat = new THREE.MeshBasicMaterial({ color: 0x8ecae6, map: txAntiSlipConcrete, transparent: true, opacity: 0.22 });
+const routeMat = new THREE.MeshBasicMaterial({ color: 0x7dd3fc, map: txAntiSlipConcrete, transparent: true, opacity: 0.2 });
 addBox(-10, 0.04, 8, 16, 0.08, 2.2, routeMat);   // ruta spawn -> núcleo
 addBox(-2, 0.04, 14, 14, 0.08, 2.2, routeMat);   // ruta núcleo -> norte
 addBox(3, 0.04, 20, 10, 0.08, 2.2, routeMat);    // ruta norte -> faro
 
 // Mapa v2: identidad industrial + coberturas + landmarks
-const hazardMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, map: txBrownFloorTiles, roughness: 0.55, metalness: 0.26, emissive: 0x311904, emissiveIntensity: 0.18 });
-const darkPanelMat = new THREE.MeshStandardMaterial({ color: 0xffffff, map: txBrokenWall, roughness: 0.72, metalness: 0.22 });
+const hazardMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, map: txBrownFloorTiles, roughness: 0.62, metalness: 0.18, emissive: 0x2b1808, emissiveIntensity: 0.14 });
+const darkPanelMat = new THREE.MeshStandardMaterial({ color: 0xe5e7eb, map: txBrokenWall, roughness: 0.78, metalness: 0.16 });
 
 // Landmark 1: torre de enfriamiento en núcleo
 addBox(-2, 3.2, 4, 3.4, 6.4, 3.4, darkPanelMat, { solid: true, colliderTag: 'cover' });
@@ -222,8 +222,8 @@ addBox(-20, 1.0, -8, 3.2, 2.0, 1.2, darkPanelMat, { solid: true, colliderTag: 'c
 addBox(22, 1.0, 6, 3.2, 2.0, 1.2, darkPanelMat, { solid: true, colliderTag: 'cover' });
 
 // Ruta riesgo/recompensa: rápida (expuesta) vs segura (coberturas)
-const fastRouteMat = new THREE.MeshBasicMaterial({ color: 0xef4444, map: txBrickFloor003, transparent: true, opacity: 0.14 });
-const safeRouteMat = new THREE.MeshBasicMaterial({ color: 0x22c55e, map: txBrickWall12, transparent: true, opacity: 0.14 });
+const fastRouteMat = new THREE.MeshBasicMaterial({ color: 0xf97316, map: txBrickFloor003, transparent: true, opacity: 0.18 });
+const safeRouteMat = new THREE.MeshBasicMaterial({ color: 0x4ade80, map: txBrickWall12, transparent: true, opacity: 0.16 });
 addBox(8, 0.035, 10, 24, 0.07, 1.5, fastRouteMat);      // rápida y expuesta hacia faro
 addBox(-14, 0.035, 10, 10, 0.07, 1.5, safeRouteMat);    // segura (más larga)
 addBox(-18, 0.035, 16, 8, 0.07, 1.5, safeRouteMat);
