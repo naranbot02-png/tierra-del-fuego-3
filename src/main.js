@@ -8,6 +8,14 @@ import {
   isTouchAutoSprinting,
 } from './input/intent.js';
 import { intentToWorldDelta } from './movement/transform.js';
+import {
+  createMissionState,
+  createFeedbackFlags,
+  resetMissionState,
+  resetFeedbackFlags,
+  getThreatLevel,
+} from './mission/state.js';
+import { updateMissionMini, renderHudText, setHudPhaseVisuals } from './ui/hud.js';
 
 const $hp = document.getElementById('hp');
 const $ammo = document.getElementById('ammo');
@@ -190,45 +198,12 @@ const state = {
   fire: false,
 };
 
-const mission = {
+const mission = createMissionState({
   targetKills: 3,
-  kills: 0,
-  timeLimit: 75,
-  timeLeft: 75,
-  phase: 'prep', // prep | playing | result
-  result: null, // win | lose | null
-  prepDuration: 2.8,
-  prepLeft: 2.8,
   extractionRadius: EXTRACTION_RADIUS,
-  extractionDuration: 2.6,
-  extractionProgress: 0,
-  extractionReady: false,
-  extractionInside: false,
-  extractionOutGraceDuration: 0.6,
-  extractionOutGraceLeft: 0.6,
-};
+});
 
-const feedbackFlags = {
-  warned30: false,
-  warned15: false,
-  warnedLowHp: false,
-  warnedThreat2: false,
-  warnedThreat3: false,
-};
-
-const THREAT_LEVELS = [
-  { id: 1, label: 'I', minTimeRatio: 0.66, moveMul: 1.0, damage: 8, hitCooldown: 0.8 },
-  { id: 2, label: 'II', minTimeRatio: 0.33, moveMul: 1.22, damage: 10, hitCooldown: 0.68 },
-  { id: 3, label: 'III', minTimeRatio: 0.0, moveMul: 1.4, damage: 12, hitCooldown: 0.56 },
-];
-
-function getThreatLevel() {
-  if (mission.phase !== 'playing') return THREAT_LEVELS[0];
-  const ratio = mission.timeLeft / mission.timeLimit;
-  if (ratio > THREAT_LEVELS[0].minTimeRatio) return THREAT_LEVELS[0];
-  if (ratio > THREAT_LEVELS[1].minTimeRatio) return THREAT_LEVELS[1];
-  return THREAT_LEVELS[2];
-}
+const feedbackFlags = createFeedbackFlags();
 
 function wrapAngle(rad) {
   let a = rad;
@@ -656,7 +631,7 @@ function resetEnemies() {
 }
 
 function updateEnemies(dt, now){
-  const threat = getThreatLevel();
+  const threat = getThreatLevel(mission);
   for (const e of enemies){
     if (e.hp <= 0) continue;
     e.t += dt * threat.moveMul;
@@ -945,67 +920,11 @@ function movePlayerWithCollisions(dx, dz) {
   resolveCollidersOverlap();
 }
 
-function setHudPhaseVisuals() {
-  if (!$missionStatus) return;
-  const phase = mission.phase;
-  $missionStatus.classList.remove('mission-prep', 'mission-live', 'mission-win', 'mission-lose');
-  if (phase === 'prep') $missionStatus.classList.add('mission-prep');
-  if (phase === 'playing') $missionStatus.classList.add('mission-live');
-  if (phase === 'result' && mission.result === 'win') $missionStatus.classList.add('mission-win');
-  if (phase === 'result' && mission.result === 'lose') $missionStatus.classList.add('mission-lose');
-}
-
-function updateMissionMini() {
-  if (!$missionMini || !$missionMiniLabel || !$missionMiniFill) return;
-
-  let label = 'Objetivo';
-  let progress = 0;
-  let tone = 'neutral';
-
-  if (mission.phase === 'prep') {
-    label = `Inicio en ${Math.ceil(mission.prepLeft)}s`;
-    progress = 1 - (mission.prepLeft / mission.prepDuration);
-    tone = 'neutral';
-  } else if (mission.phase === 'playing' && !mission.extractionReady) {
-    label = `Drones ${mission.kills}/${mission.targetKills}`;
-    progress = mission.targetKills > 0 ? (mission.kills / mission.targetKills) : 0;
-    tone = 'combat';
-  } else if (mission.phase === 'playing' && mission.extractionReady) {
-    const extractionPct = Math.round((mission.extractionProgress / mission.extractionDuration) * 100);
-    label = mission.extractionInside ? `Extracción ${extractionPct}%` : `Faro ${extractionPct}%`;
-    progress = mission.extractionProgress / mission.extractionDuration;
-    tone = 'extract';
-  } else if (mission.result === 'win') {
-    label = 'Misión completada';
-    progress = 1;
-    tone = 'win';
-  } else {
-    label = 'Misión fallida';
-    progress = 0.04;
-    tone = 'danger';
-  }
-
-  const clampedProgress = THREE.MathUtils.clamp(progress, 0, 1);
-  $missionMini.dataset.tone = tone;
-  $missionMiniLabel.textContent = label;
-  $missionMiniFill.style.width = `${Math.round(clampedProgress * 100)}%`;
-}
+// HUD helpers moved to src/ui/hud.js
 
 function resetMission(manual = false) {
-  mission.kills = 0;
-  mission.timeLeft = mission.timeLimit;
-  mission.phase = 'prep';
-  mission.result = null;
-  mission.prepLeft = mission.prepDuration;
-  mission.extractionProgress = 0;
-  mission.extractionReady = false;
-  mission.extractionInside = false;
-  mission.extractionOutGraceLeft = mission.extractionOutGraceDuration;
-  feedbackFlags.warned30 = false;
-  feedbackFlags.warned15 = false;
-  feedbackFlags.warnedLowHp = false;
-  feedbackFlags.warnedThreat2 = false;
-  feedbackFlags.warnedThreat3 = false;
+  resetMissionState(mission);
+  resetFeedbackFlags(feedbackFlags);
 
   state.hp = 100;
   state.velY = 0;
@@ -1053,7 +972,7 @@ function updateMission(dt){
     }
   } else if (mission.phase === 'playing') {
     mission.timeLeft = Math.max(0, mission.timeLeft - dt);
-    const threat = getThreatLevel();
+    const threat = getThreatLevel(mission);
 
     if (!feedbackFlags.warnedThreat2 && threat.id >= 2) {
       feedbackFlags.warnedThreat2 = true;
@@ -1153,88 +1072,28 @@ function updateMission(dt){
     }
   }
 
-  const extractionPct = Math.round((mission.extractionProgress / mission.extractionDuration) * 100);
-  const mobileCopy = isTouch;
-  const threatLabel = getThreatLevel().label;
-  const threatShort = `A-${threatLabel}`;
-
-  if ($missionStatus) {
-    if (mission.phase === 'prep') {
-      $missionStatus.textContent = `Preparación ${Math.ceil(mission.prepLeft)}s`;
-    } else if (mission.phase === 'playing') {
-      $missionStatus.textContent = mission.extractionReady
-        ? (mission.extractionInside ? 'Extrayendo' : 'Evacuación')
-        : 'En curso';
-    } else {
-      $missionStatus.textContent = mission.result === 'win' ? 'Completada' : 'Fallida';
-    }
-  }
-
-  if ($missionObjective) {
-    if (mission.phase === 'prep') {
-      $missionObjective.textContent = mobileCopy
-        ? `Drones ${mission.targetKills} + faro`
-        : `Objetivo: derribar ${mission.targetKills} drones y extraer en el faro`;
-    } else if (mission.phase === 'playing' && mission.extractionReady) {
-      const graceLeft = Math.max(0, mission.extractionOutGraceLeft);
-      const inGrace = !mission.extractionInside && mission.extractionProgress > 0 && graceLeft > 0;
-      const graceText = `${graceLeft.toFixed(1)}s`;
-
-      if (mission.extractionInside) {
-        $missionObjective.textContent = mobileCopy
-          ? `Extracción ${extractionPct}%`
-          : `Sostené posición en el faro: ${extractionPct}%`;
-      } else if (inGrace) {
-        $missionObjective.textContent = mobileCopy
-          ? `Fuera de zona · mantiene ${graceText}`
-          : `Fuera del faro: progreso protegido por ${graceText}`;
-      } else {
-        $missionObjective.textContent = mobileCopy
-          ? `Volvé al faro ${extractionPct}%`
-          : `Volvé al faro para extraer: ${extractionPct}%`;
-      }
-    } else if (mission.phase === 'playing') {
-      $missionObjective.textContent = mobileCopy
-        ? `Drones ${mission.kills}/${mission.targetKills} · ${threatShort}`
-        : `Drones derribados: ${mission.kills}/${mission.targetKills} · Amenaza ${threatLabel}`;
-    } else {
-      $missionObjective.textContent = mission.result === 'win'
-        ? (mobileCopy ? 'Zona asegurada' : 'Resultado: zona asegurada')
-        : (mobileCopy ? 'Sin tiempo/energía' : 'Resultado: sin tiempo o sin energía');
-    }
-  }
-
-  if ($missionTimer) {
-    if (mission.phase === 'prep') {
-      $missionTimer.textContent = mobileCopy
-        ? `T-${Math.ceil(mission.prepLeft)}s`
-        : `Inicio en: ${Math.ceil(mission.prepLeft)}s`;
-    } else if (mission.phase === 'playing') {
-      const timeCompact = `${Math.ceil(mission.timeLeft)}s`;
-      if (mission.extractionReady) {
-        const graceLeft = Math.max(0, mission.extractionOutGraceLeft);
-        const inGrace = !mission.extractionInside && mission.extractionProgress > 0 && graceLeft > 0;
-        const graceTag = inGrace ? ` · hold ${graceLeft.toFixed(1)}s` : '';
-        $missionTimer.textContent = mobileCopy
-          ? `${timeCompact} · ${threatShort}${inGrace ? ` · ${graceLeft.toFixed(1)}s` : ''}`
-          : `Tiempo: ${timeCompact} · Amenaza ${threatLabel}${graceTag}`;
-      } else {
-        $missionTimer.textContent = mobileCopy ? timeCompact : `Tiempo: ${timeCompact}`;
-      }
-    } else {
-      $missionTimer.textContent = mobileCopy ? '↻ Reiniciar' : 'Reiniciar: tecla R / botón ↻';
-    }
-
-    const criticalTime = mission.phase === 'playing' && mission.timeLeft <= 15;
-    $missionTimer.classList.toggle('timer-critical', criticalTime);
-  }
-
-  if ($hp) {
-    $hp.textContent = String(state.hp);
-    $hp.classList.toggle('hp-critical', state.hp <= 25);
-  }
-  updateMissionMini();
-  setHudPhaseVisuals();
+  const threat = getThreatLevel(mission);
+  renderHudText({
+    mission,
+    hp: state.hp,
+    isTouch,
+    threat,
+    refs: {
+      missionStatusEl: $missionStatus,
+      missionObjectiveEl: $missionObjective,
+      missionTimerEl: $missionTimer,
+      hpEl: $hp,
+    },
+  });
+  updateMissionMini({
+    mission,
+    refs: {
+      missionMiniEl: $missionMini,
+      missionMiniLabelEl: $missionMiniLabel,
+      missionMiniFillEl: $missionMiniFill,
+    },
+  });
+  setHudPhaseVisuals({ mission, missionStatusEl: $missionStatus });
 }
 
 function updateBeaconState(now) {
