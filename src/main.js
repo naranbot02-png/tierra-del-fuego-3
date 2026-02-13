@@ -78,20 +78,20 @@ renderer.setPixelRatio(Math.min(devicePixelRatio, isTouch ? MOBILE_MAX_DPR : DES
 renderer.setSize(innerWidth, innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.25;
+renderer.toneMappingExposure = isTouch ? 1.15 : 1.2;
 document.body.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x0b1220);
-scene.fog = new THREE.Fog(0x0b1220, 18, 120);
+scene.background = new THREE.Color(0x09111d);
+scene.fog = new THREE.Fog(0x09111d, 20, 115);
 
 const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.1, 250);
 
 // --- Lights
-scene.add(new THREE.AmbientLight(0xffffff, 0.5));
-const hemi = new THREE.HemisphereLight(0x93c5fd, 0x0f172a, 0.8);
+scene.add(new THREE.AmbientLight(0xbcd7ff, 0.42));
+const hemi = new THREE.HemisphereLight(0x67a7ff, 0x0b1324, 0.95);
 scene.add(hemi);
-const sun = new THREE.DirectionalLight(0xdbeafe, 1.35);
+const sun = new THREE.DirectionalLight(0xbcd8ff, 1.22);
 sun.position.set(10, 18, 6);
 scene.add(sun);
 
@@ -290,8 +290,9 @@ for (let i=0;i<6;i++){
 }
 
 const objectiveGuideLights = [];
-for (const [gx, gz] of [[-8, 10], [-4, 14], [0, 18], [4, 21], [0, 24]]) {
-  const g = new THREE.PointLight(0x67e8f9, 0.2, 12, 2);
+for (const [idx, [gx, gz]] of [[-8, 10], [-4, 14], [0, 18], [4, 21], [0, 24]].entries()) {
+  const color = idx < 3 ? 0x60a5fa : 0x22d3ee;
+  const g = new THREE.PointLight(color, 0.2, 13, 2);
   g.position.set(gx, 1.1, gz);
   scene.add(g);
   objectiveGuideLights.push(g);
@@ -1186,7 +1187,7 @@ damageOverlay.style.background = 'radial-gradient(circle at 50% 50%, rgba(220,38
 document.body.appendChild(damageOverlay);
 
 const enemies = [];
-const enemyMat = new THREE.MeshStandardMaterial({ color: 0xef4444, roughness: 0.55, metalness: 0.25, emissive: 0x220808, emissiveIntensity: 0.35 });
+const enemyMat = new THREE.MeshStandardMaterial({ color: 0xf97316, roughness: 0.5, metalness: 0.22, emissive: 0x3a1107, emissiveIntensity: 0.5 });
 
 const WAVE_CONFIGS = [
   {
