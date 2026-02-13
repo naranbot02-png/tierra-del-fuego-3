@@ -141,7 +141,8 @@
         touch-action: none;
       }
       /* FIRE dominante + J separado para ergonomía */
-      #btnFire { right: 20px; bottom: 178px; width: 98px; height: 98px; border-radius: 22px; background: rgba(239,68,68,.2); }
+      #btnFire { right: 20px; bottom: 178px; width: 98px; height: 98px; border-radius: 22px; background: rgba(239,68,68,.2); transition: transform 90ms ease, box-shadow 90ms ease, background 90ms ease, opacity 120ms ease; }
+      #btnFire.active { transform: scale(.96); box-shadow: 0 0 18px rgba(248,113,113,.45); background: rgba(239,68,68,.34); }
       #btnJump { right: 36px; bottom: 294px; width: 64px; height: 64px; border-radius: 17px; font-weight: 900; background: rgba(255,255,255,.12); }
       #btnRestart { right: 12px; top: max(16px, env(safe-area-inset-top)); width: 44px; height: 44px; border-radius: 12px; font-weight: 900; font-size: 20px; background: rgba(0,0,0,.32); }
 

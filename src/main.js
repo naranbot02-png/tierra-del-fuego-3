@@ -1301,8 +1301,8 @@ setupPad($lookPad, $lookStick, (x,y) => {
 
 if ($btnFire) {
   const hasPointer = ('PointerEvent' in window) && !isTouch;
-  const down = (e) => { e.preventDefault(); state.fire = true; ensureAudio(); };
-  const up = (e) => { e.preventDefault(); state.fire = false; };
+  const down = (e) => { e.preventDefault(); state.fire = true; $btnFire.classList.add('active'); ensureAudio(); };
+  const up = (e) => { e.preventDefault(); state.fire = false; $btnFire.classList.remove('active'); };
   if (hasPointer) {
     $btnFire.addEventListener('pointerdown', down);
     addEventListener('pointerup', up);
@@ -2122,6 +2122,7 @@ function tick(){
   txCoastRock.offset.x = (now * 0.00001) % 1;
 
   const canShoot = mission.phase === 'playing';
+  if ($btnFire) $btnFire.style.opacity = canShoot ? '1' : '0.72';
   const wantShoot = canShoot && ((!isTouch && pointerLocked && (keys.has('KeyF'))) || state.fire || (!isTouch && pointerLocked && mouseDown));
   if (wantShoot) doShoot(now);
 
