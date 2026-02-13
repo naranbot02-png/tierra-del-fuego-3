@@ -133,10 +133,10 @@ const metalMat = new THREE.MeshStandardMaterial({
   metalness: 0.2,
 });
 const wallMat = new THREE.MeshStandardMaterial({
-  color: 0xe3ebf4,
+  color: 0xf0f5fb,
   map: txBeamWall,
-  roughness: 0.76,
-  metalness: 0.14,
+  roughness: 0.68,
+  metalness: 0.12,
 });
 const lightMat = new THREE.MeshStandardMaterial({ color: 0xcdd9e8, map: txBlueMetalPlate, roughness: 0.28, metalness: 0.14, emissive: 0x0b1220, emissiveIntensity: 0.28 });
 
@@ -304,7 +304,7 @@ addBox(3, 0.04, 20, 10, 0.08, 2.2, routeMat);    // ruta norte -> faro
 
 // Mapa v2: identidad industrial + coberturas + landmarks
 const hazardMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, map: txBrownFloorTiles, roughness: 0.62, metalness: 0.18, emissive: 0x2b1808, emissiveIntensity: 0.14 });
-const darkPanelMat = new THREE.MeshStandardMaterial({ color: 0xe5e7eb, map: txBrokenWall, roughness: 0.78, metalness: 0.16 });
+const darkPanelMat = new THREE.MeshStandardMaterial({ color: 0xf1f5f9, map: txBrushedConcrete, roughness: 0.72, metalness: 0.12 });
 
 // Landmark 1: torre de enfriamiento en núcleo
 addBox(-2, 3.2, 4, 3.4, 6.4, 3.4, darkPanelMat, { solid: true, colliderTag: 'cover' });
@@ -352,7 +352,7 @@ addBox(
   10,
   6.0,
   10,
-  new THREE.MeshStandardMaterial({ color: 0x9ca3af, map: txBlackPaintedPlanks, roughness: 0.55, metalness: 0.15, emissive: 0x0ea5e9, emissiveIntensity: 0.35 }),
+  new THREE.MeshStandardMaterial({ color: 0xd7e3ee, map: txBlueMetalPlate, roughness: 0.46, metalness: 0.2, emissive: 0x0ea5e9, emissiveIntensity: 0.3 }),
   { solid: true, colliderTag: 'beacon-base' }
 );
 const beacon = new THREE.Mesh(
