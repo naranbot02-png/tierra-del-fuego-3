@@ -1438,6 +1438,18 @@ const WAVE_CONFIGS = [
     spawns: [[10, 16], [6, 20], [2, 24]],
   },
 ];
+
+const wavePreviewMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b, map: txBrownFloorTiles, transparent: true, opacity: 0.0 });
+const wavePreviewMarkers = [];
+for (let i = 0; i < 3; i++) {
+  const marker = new THREE.Mesh(new THREE.CircleGeometry(0.6, 22), wavePreviewMat.clone());
+  marker.rotation.x = -Math.PI / 2;
+  marker.position.set(0, 0.045, 0);
+  marker.visible = false;
+  scene.add(marker);
+  wavePreviewMarkers.push(marker);
+}
+
 let currentWaveIndex = 0;
 let pendingWaveIndex = null;
 let pendingWaveDelay = 0;
@@ -1496,6 +1508,23 @@ function deployWave(waveIndex) {
   }
 
   mission.targetKills = activeCount * WAVE_CONFIGS.length;
+}
+
+function updateWavePreview(now) {
+  if (pendingWaveIndex == null || mission.phase !== 'playing') {
+    for (const m of wavePreviewMarkers) m.visible = false;
+    return;
+  }
+  const cfg = WAVE_CONFIGS[Math.min(pendingWaveIndex, WAVE_CONFIGS.length - 1)];
+  const pulse = 0.5 + Math.sin(now * 0.012) * 0.5;
+  for (let i = 0; i < wavePreviewMarkers.length; i++) {
+    const m = wavePreviewMarkers[i];
+    const [x, z] = cfg.spawns[i % cfg.spawns.length];
+    m.visible = true;
+    m.position.set(x, 0.045, z);
+    m.scale.setScalar(0.9 + pulse * 0.28);
+    m.material.opacity = 0.14 + pulse * 0.18;
+  }
 }
 
 function resetEnemies() {
@@ -2129,6 +2158,7 @@ function tick(){
   updateDirector(dt);
 
   updateEnemies(dt, now);
+  updateWavePreview(now);
   updateMission(dt);
   updateTacticalAudio(dt);
   updateBeaconState(now);
