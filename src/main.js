@@ -397,6 +397,53 @@ const movementTelemetry = {
   sprinting: false,
 };
 
+const runTelemetry = {
+  phaseTime: { prep: 0, playing: 0, result: 0 },
+  waveTime: [0, 0, 0],
+  damageReceived: 0,
+  routeFastTime: 0,
+  routeSafeTime: 0,
+  checkpoints: [],
+  summaryShown: false,
+  balanceWaveDelayBonus: 0,
+};
+
+function resetRunTelemetry() {
+  runTelemetry.phaseTime.prep = 0;
+  runTelemetry.phaseTime.playing = 0;
+  runTelemetry.phaseTime.result = 0;
+  runTelemetry.waveTime = [0, 0, 0];
+  runTelemetry.damageReceived = 0;
+  runTelemetry.routeFastTime = 0;
+  runTelemetry.routeSafeTime = 0;
+  runTelemetry.checkpoints = [];
+  runTelemetry.summaryShown = false;
+  try {
+    runTelemetry.balanceWaveDelayBonus = Number(localStorage.getItem('tdf3_balance_wave_delay_bonus') || 0) || 0;
+  } catch {
+    runTelemetry.balanceWaveDelayBonus = 0;
+  }
+}
+
+function pushCheckpoint(tag) {
+  runTelemetry.checkpoints.push({ tag, at: Number((mission.timeLimit - mission.timeLeft).toFixed(1)) });
+}
+
+function maybeShowRunSummary() {
+  if (mission.phase !== 'result' || runTelemetry.summaryShown || !$missionFeed) return;
+  runTelemetry.summaryShown = true;
+  const cause = mission.result === 'win' ? 'win' : (mission.lastLoseReason || 'unknown');
+  const fastPct = Math.round((runTelemetry.routeFastTime / Math.max(0.01, runTelemetry.phaseTime.playing)) * 100);
+  const safePct = Math.round((runTelemetry.routeSafeTime / Math.max(0.01, runTelemetry.phaseTime.playing)) * 100);
+  const nextBonus = mission.result === 'lose' && mission.lastLoseReason === 'hp' ? 0.35 : 0;
+  try { localStorage.setItem('tdf3_balance_wave_delay_bonus', String(nextBonus)); } catch {}
+
+  $missionFeed.classList.remove('feed-warn', 'feed-danger', 'feed-good');
+  $missionFeed.classList.add('show', mission.result === 'win' ? 'feed-good' : 'feed-warn');
+  $missionFeed.textContent = `Run: ${cause} · dmg ${Math.round(runTelemetry.damageReceived)} · ruta rápida ${fastPct}% / segura ${safePct}% · next delay+${nextBonus.toFixed(2)}s`;
+}
+
+
 const calibrationWizard = {
   active: false,
   phase: 'y',
@@ -994,6 +1041,7 @@ function updateEnemies(dt, now){
     const globalHurtReady = (now - lastDamageAt) >= PLAYER_HURT_IFRAME_MS;
     if (dist < 1.9 && e.hitCd <= 0 && globalHurtReady && mission.phase === 'playing') {
       const waveDamage = Math.round(threat.damage * (e.waveDamageMul || 1));
+      runTelemetry.damageReceived += waveDamage;
       state.hp = Math.max(0, state.hp - waveDamage);
       e.hitCd = threat.hitCooldown;
       lastDamageAt = now;
@@ -1005,7 +1053,7 @@ function updateEnemies(dt, now){
   const hasNextWave = currentWaveIndex < (WAVE_CONFIGS.length - 1);
   if (mission.phase === 'playing' && aliveCount === 0 && hasNextWave && pendingWaveIndex == null && mission.kills < mission.targetKills) {
     pendingWaveIndex = currentWaveIndex + 1;
-    pendingWaveDelay = WAVE_CONFIGS[pendingWaveIndex].delay;
+    pendingWaveDelay = WAVE_CONFIGS[pendingWaveIndex].delay + runTelemetry.balanceWaveDelayBonus;
     if ($tip) {
       $tip.style.display = 'block';
       $tip.textContent = `Reagrupando drones… próxima oleada en ${pendingWaveDelay.toFixed(1)}s`;
@@ -1319,6 +1367,7 @@ function resetMission(manual = false) {
 
   if ($missionFeed) $missionFeed.classList.remove('show', 'feed-warn', 'feed-danger', 'feed-good');
 
+  resetRunTelemetry();
   resetEnemies();
   extractionZone.visible = false;
   extractionZone.material.opacity = 0;
@@ -1363,6 +1412,16 @@ function updateMission(dt){
     sfxLose,
     vibrate: navigator.vibrate?.bind(navigator),
   });
+
+  for (const ev of events) {
+    if (ev.type === 'extraction-ready') pushCheckpoint('extraction-ready');
+    if (ev.type === 'extraction-grace-critical') pushCheckpoint('grace-critical');
+    if (ev.type === 'extraction-grace-expired') pushCheckpoint('grace-expired');
+    if (ev.type === 'mission-win') pushCheckpoint('win');
+    if (ev.type === 'mission-lose') pushCheckpoint(`lose-${ev.reason || 'unknown'}`);
+  }
+
+  maybeShowRunSummary();
 
   const threat = getThreatLevel(mission);
   const extractionDistance = Math.round(Math.hypot(state.pos.x - EXTRACTION_POINT.x, state.pos.z - EXTRACTION_POINT.y));
@@ -1539,6 +1598,16 @@ function tick(){
 
   updatePlayer(dt, now);
   updateCalibrationWizard(dt);
+
+  runTelemetry.phaseTime[mission.phase] = (runTelemetry.phaseTime[mission.phase] || 0) + dt;
+  if (mission.phase === 'playing') {
+    runTelemetry.waveTime[currentWaveIndex] = (runTelemetry.waveTime[currentWaveIndex] || 0) + dt;
+    const inFastRoute = state.pos.x > 2 && state.pos.z > 6 && state.pos.z < 24;
+    const inSafeRoute = state.pos.x < -8 && state.pos.z > 6 && state.pos.z < 24;
+    if (inFastRoute) runTelemetry.routeFastTime += dt;
+    if (inSafeRoute) runTelemetry.routeSafeTime += dt;
+  }
+
   updateEnemies(dt, now);
   updateMission(dt);
   updateBeaconState(now);
