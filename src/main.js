@@ -1208,9 +1208,23 @@ function updateMission(dt){
         ? `Drones ${mission.targetKills} + faro`
         : `Objetivo: derribar ${mission.targetKills} drones y extraer en el faro`;
     } else if (mission.phase === 'playing' && mission.extractionReady) {
-      $missionObjective.textContent = mission.extractionInside
-        ? (mobileCopy ? `Extracción ${extractionPct}%` : `Sostené posición en el faro: ${extractionPct}%`)
-        : (mobileCopy ? `Volvé al faro ${extractionPct}%` : `Volvé al faro para extraer: ${extractionPct}%`);
+      const graceLeft = Math.max(0, mission.extractionOutGraceLeft);
+      const inGrace = !mission.extractionInside && mission.extractionProgress > 0 && graceLeft > 0;
+      const graceText = `${graceLeft.toFixed(1)}s`;
+
+      if (mission.extractionInside) {
+        $missionObjective.textContent = mobileCopy
+          ? `Extracción ${extractionPct}%`
+          : `Sostené posición en el faro: ${extractionPct}%`;
+      } else if (inGrace) {
+        $missionObjective.textContent = mobileCopy
+          ? `Fuera de zona · mantiene ${graceText}`
+          : `Fuera del faro: progreso protegido por ${graceText}`;
+      } else {
+        $missionObjective.textContent = mobileCopy
+          ? `Volvé al faro ${extractionPct}%`
+          : `Volvé al faro para extraer: ${extractionPct}%`;
+      }
     } else if (mission.phase === 'playing') {
       $missionObjective.textContent = mobileCopy
         ? `Drones ${mission.kills}/${mission.targetKills} · ${threatShort}`
@@ -1229,9 +1243,16 @@ function updateMission(dt){
         : `Inicio en: ${Math.ceil(mission.prepLeft)}s`;
     } else if (mission.phase === 'playing') {
       const timeCompact = `${Math.ceil(mission.timeLeft)}s`;
-      $missionTimer.textContent = mission.extractionReady
-        ? (mobileCopy ? `${timeCompact} · ${threatShort}` : `Tiempo: ${timeCompact} · Amenaza ${threatLabel}`)
-        : (mobileCopy ? timeCompact : `Tiempo: ${timeCompact}`);
+      if (mission.extractionReady) {
+        const graceLeft = Math.max(0, mission.extractionOutGraceLeft);
+        const inGrace = !mission.extractionInside && mission.extractionProgress > 0 && graceLeft > 0;
+        const graceTag = inGrace ? ` · hold ${graceLeft.toFixed(1)}s` : '';
+        $missionTimer.textContent = mobileCopy
+          ? `${timeCompact} · ${threatShort}${inGrace ? ` · ${graceLeft.toFixed(1)}s` : ''}`
+          : `Tiempo: ${timeCompact} · Amenaza ${threatLabel}${graceTag}`;
+      } else {
+        $missionTimer.textContent = mobileCopy ? timeCompact : `Tiempo: ${timeCompact}`;
+      }
     } else {
       $missionTimer.textContent = mobileCopy ? '↻ Reiniciar' : 'Reiniciar: tecla R / botón ↻';
     }
@@ -1299,12 +1320,16 @@ function updateExtractionIndicator() {
   $extractArrow.textContent = '▲';
   $extractArrow.style.transform = `translateY(-1px) rotate(${rotationDeg.toFixed(1)}deg)`;
 
+  const graceLeft = Math.max(0, mission.extractionOutGraceLeft);
+  const inGrace = mission.extractionProgress > 0 && graceLeft > 0;
+  const graceSuffix = inGrace ? ` · hold ${graceLeft.toFixed(1)}s` : '';
+
   if (Math.abs(yawDelta) < 0.16) {
-    $extractLabel.textContent = `Faro al frente · ${distance}m`;
+    $extractLabel.textContent = `Faro al frente · ${distance}m${graceSuffix}`;
   } else if (yawDelta > 0) {
-    $extractLabel.textContent = `Faro a la derecha · ${distance}m`;
+    $extractLabel.textContent = `Faro a la derecha · ${distance}m${graceSuffix}`;
   } else {
-    $extractLabel.textContent = `Faro a la izquierda · ${distance}m`;
+    $extractLabel.textContent = `Faro a la izquierda · ${distance}m${graceSuffix}`;
   }
 }
 
