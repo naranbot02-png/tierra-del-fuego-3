@@ -54,6 +54,7 @@ export function stepMissionCore({ mission, feedbackFlags, dt, playerHp, insideEx
   if (mission.extractionReady) {
     const wasInside = mission.extractionInside;
     const prevGraceLeft = mission.extractionOutGraceLeft;
+    const prevProgress = mission.extractionProgress;
     const hadProgress = mission.extractionProgress > 0;
     const extractionStep = stepExtractionProgress({
       progress: mission.extractionProgress,
