@@ -612,6 +612,18 @@ function updateDirector(dt) {
     director.modeChanges += 1;
     director.adjustLog.push({ at: Number((mission.timeLimit - mission.timeLeft).toFixed(1)), mode: director.mode, p: Number(director.pressure.toFixed(2)) });
     director.adjustLog = director.adjustLog.slice(-10);
+
+    if ($missionFeed && mission.phase === 'playing') {
+      const modeText = director.mode === 'pressure'
+        ? 'Director: presión alta'
+        : (director.mode === 'calm' ? 'Director: presión baja' : 'Director: presión normal');
+      $missionFeed.classList.remove('feed-warn', 'feed-danger', 'feed-good');
+      $missionFeed.classList.add('show', director.mode === 'pressure' ? 'feed-danger' : 'feed-warn');
+      $missionFeed.textContent = modeText;
+      setTimeout(() => {
+        if (mission.phase === 'playing') $missionFeed.classList.remove('show', 'feed-warn', 'feed-danger', 'feed-good');
+      }, 900);
+    }
   }
 }
 
