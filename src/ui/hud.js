@@ -48,7 +48,7 @@ export function updateMissionMini({ mission, refs }) {
   missionMiniFillEl.style.width = `${Math.round(clamp01(progress) * 100)}%`;
 }
 
-export function renderHudText({ mission, hp, isTouch, threat, extractionDistance = 0, sprinting = false, refs }) {
+export function renderHudText({ mission, hp, isTouch, threat, extractionDistance = 0, pendingWaveDelay = 0, pendingWaveActive = false, sprinting = false, refs }) {
   const { missionStatusEl, missionObjectiveEl, missionTimerEl, hpEl } = refs;
   const extractionPct = Math.round((mission.extractionProgress / mission.extractionDuration) * 100);
   const mobileCopy = isTouch;
@@ -91,9 +91,10 @@ export function renderHudText({ mission, hp, isTouch, threat, extractionDistance
           : `Volvé al faro para extraer: ${extractionPct}% · Distancia ${extractionDistance}m`;
       }
     } else if (mission.phase === 'playing') {
+      const waveTag = pendingWaveActive ? ` · oleada en ${Math.max(0, pendingWaveDelay).toFixed(1)}s` : '';
       missionObjectiveEl.textContent = mobileCopy
-        ? `Drones ${mission.kills}/${mission.targetKills} · ${threatShort}`
-        : `Drones derribados: ${mission.kills}/${mission.targetKills} · Amenaza ${threatLabel}`;
+        ? `Drones ${mission.kills}/${mission.targetKills} · ${threatShort}${pendingWaveActive ? ` · ${Math.max(0, pendingWaveDelay).toFixed(1)}s` : ''}`
+        : `Drones derribados: ${mission.kills}/${mission.targetKills} · Amenaza ${threatLabel}${waveTag}`;
     } else {
       if (mission.result === 'win') {
         missionObjectiveEl.textContent = mobileCopy ? 'Zona asegurada' : 'Resultado: zona asegurada';

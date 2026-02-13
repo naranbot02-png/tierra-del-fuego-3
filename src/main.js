@@ -1372,6 +1372,8 @@ function updateMission(dt){
     isTouch,
     threat,
     extractionDistance,
+    pendingWaveDelay,
+    pendingWaveActive: pendingWaveIndex != null,
     sprinting: movementTelemetry.sprinting,
     refs: {
       missionStatusEl: $missionStatus,
