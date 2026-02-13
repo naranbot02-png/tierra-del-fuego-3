@@ -114,5 +114,22 @@ test('ramas terminales: mission-win y mission-lose', () => {
   });
   assert.equal(missionLose.phase, 'result');
   assert.equal(missionLose.result, 'lose');
-  assert.ok(loseStep.events.some((e) => e.type === 'mission-lose'));
+  const loseEvent = loseStep.events.find((e) => e.type === 'mission-lose');
+  assert.ok(loseEvent);
+  assert.equal(loseEvent.reason, 'time');
+
+  const missionLoseHp = createMissionState({ targetKills: 3, extractionRadius: 6.5 });
+  const flagsLoseHp = createFeedbackFlags();
+  missionLoseHp.phase = 'playing';
+
+  const loseHpStep = stepMissionCore({
+    mission: missionLoseHp,
+    feedbackFlags: flagsLoseHp,
+    dt: 0.1,
+    playerHp: 0,
+    insideExtractionZone: false,
+  });
+  const loseHpEvent = loseHpStep.events.find((e) => e.type === 'mission-lose');
+  assert.ok(loseHpEvent);
+  assert.equal(loseHpEvent.reason, 'hp');
 });

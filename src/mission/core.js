@@ -89,7 +89,8 @@ export function stepMissionCore({ mission, feedbackFlags, dt, playerHp, insideEx
   if (mission.timeLeft <= 0 || playerHp <= 0) {
     mission.phase = 'result';
     mission.result = 'lose';
-    events.push({ type: 'mission-lose' });
+    const reason = playerHp <= 0 ? 'hp' : 'time';
+    events.push({ type: 'mission-lose', reason });
   }
 
   return { events };

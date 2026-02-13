@@ -27,9 +27,15 @@ export function applyMissionTipEffects({ events, mission, isTouch, tipEl }) {
     return;
   }
 
-  const text = isTouch
+  let text = isTouch
     ? (tipDef.mobile || tipDef.text || tipDef.desktop)
     : (tipDef.desktop || tipDef.text || tipDef.mobile);
+
+  if (chosen.eventType === 'mission-lose') {
+    const loseEvent = events.find((ev) => ev.type === 'mission-lose');
+    if (loseEvent?.reason === 'hp') text = 'Misión fallida: sin energía. R para reintentar.';
+    if (loseEvent?.reason === 'time') text = 'Misión fallida: sin tiempo. R para reintentar.';
+  }
 
   if (!text) return;
 
