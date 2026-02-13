@@ -1,47 +1,48 @@
+import { MISSION_EFFECTS_CATALOG, MISSION_TIP_PRIORITY } from './catalog.js';
+
+let mobileTipLockUntil = 0;
+
+function shouldHideTip(mission, tipDef) {
+  if (!tipDef.hideWhen) return false;
+  return tipDef.hideWhen(mission);
+}
+
 export function applyMissionTipEffects({ events, mission, isTouch, tipEl }) {
-  if (!tipEl) return;
+  if (!tipEl || events.length === 0) return;
 
-  for (const ev of events) {
-    if (ev.type === 'mission-started') {
-      tipEl.textContent = isTouch
-        ? '¡Ventana táctica abierta! Stick al máximo = sprint táctico.'
-        : '¡Ventana táctica abierta! Shift = sprint táctico.';
-      tipEl.style.display = 'block';
-      if (isTouch) setTimeout(() => { if (mission.phase === 'playing') tipEl.style.display = 'none'; }, 1000);
-    }
+  const tipCatalog = MISSION_EFFECTS_CATALOG.tips;
+  const tipCandidates = events
+    .map((ev) => ({ eventType: ev.type, tip: tipCatalog[ev.type] }))
+    .filter((entry) => !!entry.tip)
+    .sort((a, b) => (b.tip.priority ?? 0) - (a.tip.priority ?? 0));
 
-    if (ev.type === 'warn-threat-2') {
-      tipEl.textContent = 'Amenaza II: drones más agresivos.';
-      tipEl.style.display = 'block';
-      if (isTouch) setTimeout(() => { if (mission.phase === 'playing') tipEl.style.display = 'none'; }, 850);
-    }
+  if (tipCandidates.length === 0) return;
 
-    if (ev.type === 'warn-threat-3') {
-      tipEl.textContent = 'Amenaza III: máxima presión.';
-      tipEl.style.display = 'block';
-      if (isTouch) setTimeout(() => { if (mission.phase === 'playing') tipEl.style.display = 'none'; }, 1000);
-    }
+  const chosen = tipCandidates[0];
+  const tipDef = chosen.tip;
+  const now = Date.now();
 
-    if (ev.type === 'extraction-ready') {
-      tipEl.textContent = 'Objetivo actualizado: volvé al faro para extraer.';
-      tipEl.style.display = 'block';
-      if (isTouch) setTimeout(() => { if (mission.phase === 'playing' && mission.extractionReady) tipEl.style.display = 'none'; }, 1100);
-    }
+  // RC tuning: en mobile, suprimir tips de baja prioridad si uno reciente sigue vigente.
+  if (isTouch && now < mobileTipLockUntil && (tipDef.priority ?? 0) < MISSION_TIP_PRIORITY.HIGH) {
+    return;
+  }
 
-    if (ev.type === 'extraction-grace-expired') {
-      tipEl.textContent = 'Se perdió la cobertura del faro: la extracción cae.';
-      tipEl.style.display = 'block';
-      if (isTouch) setTimeout(() => { if (mission.phase === 'playing') tipEl.style.display = 'none'; }, 900);
-    }
+  const text = isTouch
+    ? (tipDef.mobile || tipDef.text || tipDef.desktop)
+    : (tipDef.desktop || tipDef.text || tipDef.mobile);
 
-    if (ev.type === 'mission-win') {
-      tipEl.textContent = 'Extracción confirmada. R para reiniciar.';
-      tipEl.style.display = 'block';
-    }
+  if (!text) return;
 
-    if (ev.type === 'mission-lose') {
-      tipEl.textContent = 'Misión fallida. R para reintentar.';
-      tipEl.style.display = 'block';
-    }
+  tipEl.textContent = text;
+  tipEl.style.display = 'block';
+
+  if (tipDef.persistent) return;
+
+  if (isTouch) {
+    const duration = tipDef.durationMobileMs ?? 900;
+    mobileTipLockUntil = now + duration;
+    setTimeout(() => {
+      if (!shouldHideTip(mission, tipDef)) tipEl.style.display = 'none';
+    }, duration);
   }
 }

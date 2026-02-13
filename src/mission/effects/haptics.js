@@ -1,10 +1,11 @@
+import { MISSION_EFFECTS_CATALOG } from './catalog.js';
+
 export function applyMissionHapticsEffects({ events, isTouch, vibrate }) {
   if (!isTouch || !vibrate) return;
 
+  const hapticsCatalog = MISSION_EFFECTS_CATALOG.haptics;
   for (const ev of events) {
-    if (ev.type === 'warn-threat-3') vibrate([16, 44, 16]);
-    if (ev.type === 'warn-low-hp') vibrate([20, 60, 20]);
-    if (ev.type === 'extraction-ready') vibrate(18);
-    if (ev.type === 'extraction-entered') vibrate(12);
+    const pattern = hapticsCatalog[ev.type];
+    if (pattern != null) vibrate(pattern);
   }
 }

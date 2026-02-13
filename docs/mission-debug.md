@@ -22,6 +22,7 @@
    - `src/mission/effects/audio.js`
    - `src/mission/effects/ui-tip.js`
    - `src/mission/effects/haptics.js`
+   - catálogo central: `src/mission/effects/catalog.js` (mensajes + cues + patrones)
 4. Para depurar fino, log temporal en `updateMission`:
    - `if (events.length) console.info('[mission-events]', events);`
 
