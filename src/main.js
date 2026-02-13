@@ -1964,6 +1964,9 @@ function updateBeaconState(now) {
     const graceCritical = !mission.extractionInside && mission.extractionOutGraceLeft > 0 && mission.extractionOutGraceLeft <= 0.2;
     extractionZone.visible = true;
     extractionZone.material.opacity = 0.22 + pulse * 0.22 + p * 0.2;
+    extractionZone.material.color.setHex(graceCritical ? 0xfb7185 : (p > 0.66 ? 0x86efac : 0x67e8f9));
+    extractionZone.material.map.offset.x = (now * 0.00006) % 1;
+    extractionZone.material.map.offset.y = (now * 0.00004) % 1;
     extractionZone.scale.setScalar(1 + (1 - p) * 0.06);
     beacon.material.emissiveIntensity = baseGlow + 0.25 + p * 0.75;
     beaconLight.intensity = graceCritical ? (3.6 + pulse * 1.3) : (2.8 + pulse * 0.9 + p * 1.1);
@@ -1976,6 +1979,8 @@ function updateBeaconState(now) {
 
   extractionZone.visible = false;
   extractionZone.material.opacity = 0;
+  extractionZone.material.color.setHex(0x67e8f9);
+  extractionZone.material.map.offset.set(0, 0);
   extractionZone.scale.setScalar(1);
   beacon.material.emissiveIntensity = baseGlow;
   beaconLight.intensity = 2.4 + pulse * 0.35;
