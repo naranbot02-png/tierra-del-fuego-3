@@ -1231,14 +1231,21 @@ function updateExtractionIndicator() {
 
   const graceLeft = Math.max(0, mission.extractionOutGraceLeft);
   const inGrace = mission.extractionProgress > 0 && graceLeft > 0;
+  const graceCritical = inGrace && !mission.extractionInside && graceLeft <= 0.2;
   const graceSuffix = inGrace ? ` · hold ${graceLeft.toFixed(1)}s` : '';
 
+  if (graceCritical) {
+    const dangerPulse = 0.55 + Math.sin(performance.now() * 0.02) * 0.45;
+    $extractArrow.style.color = '#f43f5e';
+    $extractLabel.style.color = `rgba(251, 113, 133, ${dangerPulse.toFixed(2)})`;
+  }
+
   if (Math.abs(yawDelta) < 0.16) {
-    $extractLabel.textContent = `Faro al frente · ${distance}m${graceSuffix}`;
+    $extractLabel.textContent = `${graceCritical ? '⚠ ' : ''}Faro al frente · ${distance}m${graceSuffix}`;
   } else if (yawDelta > 0) {
-    $extractLabel.textContent = `Faro a la derecha · ${distance}m${graceSuffix}`;
+    $extractLabel.textContent = `${graceCritical ? '⚠ ' : ''}Faro a la derecha · ${distance}m${graceSuffix}`;
   } else {
-    $extractLabel.textContent = `Faro a la izquierda · ${distance}m${graceSuffix}`;
+    $extractLabel.textContent = `${graceCritical ? '⚠ ' : ''}Faro a la izquierda · ${distance}m${graceSuffix}`;
   }
 }
 
