@@ -56,7 +56,52 @@ scene.add(sun);
 // --- World
 const groundMat = new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 1.0 });
 const iceMat = new THREE.MeshStandardMaterial({ color: 0x25314f, roughness: 0.8, metalness: 0.05 });
-const metalMat = new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.55, metalness: 0.35 });
+
+function createWallTexture() {
+  const size = 256;
+  const c = document.createElement('canvas');
+  c.width = size;
+  c.height = size;
+  const ctx = c.getContext('2d');
+
+  ctx.fillStyle = '#3f4c61';
+  ctx.fillRect(0, 0, size, size);
+
+  // Horizontal bands
+  ctx.fillStyle = 'rgba(255,255,255,0.06)';
+  for (let y = 0; y < size; y += 32) {
+    ctx.fillRect(0, y, size, 3);
+  }
+
+  // Vertical panel seams
+  ctx.fillStyle = 'rgba(15,23,42,0.45)';
+  for (let x = 0; x < size; x += 64) {
+    ctx.fillRect(x, 0, 2, size);
+  }
+
+  // Tiny rivets/noise
+  ctx.fillStyle = 'rgba(203,213,225,0.18)';
+  for (let i = 0; i < 180; i++) {
+    const x = (Math.random() * size) | 0;
+    const y = (Math.random() * size) | 0;
+    ctx.fillRect(x, y, 1, 1);
+  }
+
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(2, 1);
+  tex.anisotropy = 4;
+  return tex;
+}
+
+const wallTexture = createWallTexture();
+const metalMat = new THREE.MeshStandardMaterial({
+  color: 0x9fb2cc,
+  map: wallTexture,
+  roughness: 0.62,
+  metalness: 0.28,
+});
 const lightMat = new THREE.MeshStandardMaterial({ color: 0xcbd5e1, roughness: 0.2, metalness: 0.1, emissive: 0x0b1220, emissiveIntensity: 0.35 });
 
 const ground = new THREE.Mesh(new THREE.PlaneGeometry(240, 240), groundMat);
