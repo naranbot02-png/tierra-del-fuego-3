@@ -1188,11 +1188,13 @@ function updateMission(dt){
   });
 
   const threat = getThreatLevel(mission);
+  const extractionDistance = Math.round(Math.hypot(state.pos.x - EXTRACTION_POINT.x, state.pos.z - EXTRACTION_POINT.y));
   renderHudText({
     mission,
     hp: state.hp,
     isTouch,
     threat,
+    extractionDistance,
     sprinting: movementTelemetry.sprinting,
     refs: {
       missionStatusEl: $missionStatus,

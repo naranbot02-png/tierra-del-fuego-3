@@ -48,7 +48,7 @@ export function updateMissionMini({ mission, refs }) {
   missionMiniFillEl.style.width = `${Math.round(clamp01(progress) * 100)}%`;
 }
 
-export function renderHudText({ mission, hp, isTouch, threat, sprinting = false, refs }) {
+export function renderHudText({ mission, hp, isTouch, threat, extractionDistance = 0, sprinting = false, refs }) {
   const { missionStatusEl, missionObjectiveEl, missionTimerEl, hpEl } = refs;
   const extractionPct = Math.round((mission.extractionProgress / mission.extractionDuration) * 100);
   const mobileCopy = isTouch;
@@ -87,8 +87,8 @@ export function renderHudText({ mission, hp, isTouch, threat, sprinting = false,
           : `Fuera del faro: progreso protegido por ${graceText}`;
       } else {
         missionObjectiveEl.textContent = mobileCopy
-          ? `Volvé al faro ${extractionPct}%`
-          : `Volvé al faro para extraer: ${extractionPct}%`;
+          ? `Volvé al faro ${extractionPct}% · ${extractionDistance}m`
+          : `Volvé al faro para extraer: ${extractionPct}% · Distancia ${extractionDistance}m`;
       }
     } else if (mission.phase === 'playing') {
       missionObjectiveEl.textContent = mobileCopy
