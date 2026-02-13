@@ -1,5 +1,13 @@
 import * as THREE from 'https://unpkg.com/three@0.182.0/build/three.module.js';
 import { stepExtractionProgress } from './extraction.js';
+import {
+  getKeyboardIntentAxes,
+  getTouchIntentAxes,
+  normalizeIntentAxes,
+  isKeyboardSprinting,
+  isTouchAutoSprinting,
+} from './input/intent.js';
+import { intentToWorldDelta } from './movement/transform.js';
 
 const $hp = document.getElementById('hp');
 const $ammo = document.getElementById('ammo');
@@ -731,10 +739,6 @@ const COLLISION_MAX_SLIDES = 4;
 
 const MOVE_SPEED = 5.6;
 const SPRINT_MULTIPLIER = 1.27;
-const MOBILE_AUTO_SPRINT_THRESHOLD = 0.92;
-const WORLD_UP = new THREE.Vector3(0, 1, 0);
-const tempForward = new THREE.Vector3();
-const tempRight = new THREE.Vector3();
 
 /*
 Manual smoke tests (input refactor):
@@ -745,69 +749,13 @@ Manual smoke tests (input refactor):
 5) Tecla I: mostrar/ocultar debug (intent/world)
 */
 
-function getKeyboardIntentAxes() {
-  let x = 0;
-  let y = 0;
-  if (keys.has('KeyA')) x -= 1;
-  if (keys.has('KeyD')) x += 1;
-  if (keys.has('KeyW')) y += 1;
-  if (keys.has('KeyS')) y -= 1;
-  return { x, y };
-}
-
-function getTouchIntentAxes() {
-  // Stick Y UI: arriba es negativo. Convención de intención: +Y avanza.
-  return {
-    x: touch.moveX,
-    y: -touch.moveY,
-  };
-}
-
-function normalizeIntentAxes(...sources) {
-  let x = 0;
-  let y = 0;
-
-  for (const source of sources) {
-    x += source.x;
-    y += source.y;
-  }
-
-  const len = Math.hypot(x, y);
-  if (len > 1) {
-    x /= len;
-    y /= len;
-  }
-
-  return { x, y };
-}
-
-function intentToWorldDelta(intentX, intentY, dt, speed = MOVE_SPEED) {
-  // Derive basis from actual camera forward, so input always matches what the player sees.
-  camera.rotation.set(state.pitch, state.yaw, 0, 'YXZ');
-  camera.getWorldDirection(tempForward);
-  tempForward.y = 0;
-  if (tempForward.lengthSq() > 1e-6) tempForward.normalize();
-
-  tempRight.crossVectors(tempForward, WORLD_UP).normalize();
-
-  const worldX = (tempRight.x * intentX + tempForward.x * intentY) * speed * dt;
-  const worldZ = (tempRight.z * intentX + tempForward.z * intentY) * speed * dt;
-  return { worldX, worldZ };
-}
-
-function isKeyboardSprinting() {
-  return mission.phase === 'playing' && (keys.has('ShiftLeft') || keys.has('ShiftRight'));
-}
-
-function isTouchAutoSprinting(intentX, intentY) {
-  if (!isTouch || mission.phase !== 'playing') return false;
-  return Math.hypot(intentX, intentY) >= MOBILE_AUTO_SPRINT_THRESHOLD;
-}
+// input/movement helpers moved to modules (src/input, src/movement)
 
 function applyMovementFromIntent(intentX, intentY, dt) {
-  const sprinting = isKeyboardSprinting() || isTouchAutoSprinting(intentX, intentY);
+  const sprinting = isKeyboardSprinting(keys, mission.phase)
+    || isTouchAutoSprinting({ isTouch, missionPhase: mission.phase, intentX, intentY });
   const speed = sprinting ? MOVE_SPEED * SPRINT_MULTIPLIER : MOVE_SPEED;
-  const { worldX, worldZ } = intentToWorldDelta(intentX, intentY, dt, speed);
+  const { worldX, worldZ } = intentToWorldDelta({ camera, state, intentX, intentY, dt, speed });
   movePlayerWithCollisions(worldX, worldZ);
   return { worldX, worldZ };
 }
@@ -1360,8 +1308,8 @@ function updatePlayer(dt, now){
     state.pitch = Math.max(-1.25, Math.min(1.0, state.pitch));
   }
 
-  const keyboardIntent = getKeyboardIntentAxes();
-  const touchIntent = getTouchIntentAxes();
+  const keyboardIntent = getKeyboardIntentAxes(keys);
+  const touchIntent = getTouchIntentAxes(touch);
   const intent = normalizeIntentAxes(keyboardIntent, touchIntent);
   const { worldX, worldZ } = applyMovementFromIntent(intent.x, intent.y, dt);
   maybeLogInputDebug(now, intent.x, intent.y, worldX, worldZ);
