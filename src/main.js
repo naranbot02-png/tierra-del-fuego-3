@@ -54,6 +54,10 @@ const $tvDelay = document.getElementById('tvDelay');
 const $tvDamage = document.getElementById('tvDamage');
 const $btnTunePresetNormal = document.getElementById('btnTunePresetNormal');
 const $btnTunePresetHard = document.getElementById('btnTunePresetHard');
+const $btnTunePresetMobile = document.getElementById('btnTunePresetMobile');
+const $btnTunePresetDesktop = document.getElementById('btnTunePresetDesktop');
+const $btnTuneSuggest = document.getElementById('btnTuneSuggest');
+const $tuneSuggestion = document.getElementById('tuneSuggestion');
 const $calibReadout = document.getElementById('calibReadout');
 const $btnRestart = document.getElementById('btnRestart');
 const $btnSettings = document.getElementById('btnSettings');
@@ -452,6 +456,19 @@ function maybeShowRunSummary() {
   const nextBonus = mission.result === 'lose' && mission.lastLoseReason === 'hp' ? 0.35 : 0;
   try { localStorage.setItem('tdf3_balance_wave_delay_bonus', String(nextBonus)); } catch {}
 
+  try {
+    const runs = readRecentRuns();
+    runs.push({
+      cause,
+      damage: Math.round(runTelemetry.damageReceived),
+      fastPct,
+      safePct,
+      playingTime: Number(runTelemetry.phaseTime.playing.toFixed(1)),
+      at: Date.now(),
+    });
+    localStorage.setItem('tdf3_recent_runs', JSON.stringify(runs.slice(-8)));
+  } catch {}
+
   $missionFeed.classList.remove('feed-warn', 'feed-danger', 'feed-good');
   $missionFeed.classList.add('show', mission.result === 'win' ? 'feed-good' : 'feed-warn');
   $missionFeed.textContent = `Run: ${cause} · dmg ${Math.round(runTelemetry.damageReceived)} · ruta rápida ${fastPct}% / segura ${safePct}% · tune d${tuning.density.toFixed(1)} Δ${tuning.delayMul.toFixed(1)} x${tuning.damageMul.toFixed(1)} · next delay+${nextBonus.toFixed(2)}s`;
@@ -494,11 +511,19 @@ function applyConfigButtonsVisibility() {
   if ($btnCalib) $btnCalib.style.display = '';
 }
 
-function applyTuningPreset(kind) {
+function applyTuningPreset(kind, { persist = true, reason = '' } = {}) {
   if (kind === 'hard') {
     tuning.density = 1.3;
     tuning.delayMul = 0.85;
     tuning.damageMul = 1.25;
+  } else if (kind === 'mobile') {
+    tuning.density = 0.9;
+    tuning.delayMul = 1.15;
+    tuning.damageMul = 0.9;
+  } else if (kind === 'desktop') {
+    tuning.density = 1.1;
+    tuning.delayMul = 0.95;
+    tuning.damageMul = 1.05;
   } else {
     tuning.density = 1.0;
     tuning.delayMul = 1.0;
@@ -508,7 +533,8 @@ function applyTuningPreset(kind) {
   if ($tuneDelay) $tuneDelay.value = String(tuning.delayMul);
   if ($tuneDamage) $tuneDamage.value = String(tuning.damageMul);
   refreshTuningUiLabels();
-  saveTuningSettings();
+  if (persist) saveTuningSettings();
+  if ($tuneSuggestion) $tuneSuggestion.textContent = reason || `Preset aplicado: ${kind}`;
 }
 
 function refreshTuningUiLabels() {
@@ -522,14 +548,41 @@ function saveTuningSettings() {
     localStorage.setItem('tdf3_tune_density', String(tuning.density));
     localStorage.setItem('tdf3_tune_delay', String(tuning.delayMul));
     localStorage.setItem('tdf3_tune_damage', String(tuning.damageMul));
+    localStorage.setItem('tdf3_tune_initialized', '1');
   } catch {}
 }
 
+function readRecentRuns() {
+  try {
+    return JSON.parse(localStorage.getItem('tdf3_recent_runs') || '[]');
+  } catch {
+    return [];
+  }
+}
+
+function computeSuggestedTuningFromRuns(runs) {
+  if (!runs.length) return { preset: isTouch ? 'mobile' : 'desktop', reason: 'Sin runs previas: preset por dispositivo.' };
+
+  const avgDmg = runs.reduce((acc, r) => acc + (r.damage || 0), 0) / runs.length;
+  const hpLosses = runs.filter((r) => r.cause === 'hp').length;
+  const timeLosses = runs.filter((r) => r.cause === 'time').length;
+
+  if (hpLosses >= 2 || avgDmg > 130) {
+    return { preset: 'mobile', reason: `Sugerido suave: daño promedio ${Math.round(avgDmg)} y derrotas por HP.` };
+  }
+  if (timeLosses >= 2 && avgDmg < 80) {
+    return { preset: 'hard', reason: `Sugerido más agresivo: runs largas con baja presión (dmg ${Math.round(avgDmg)}).` };
+  }
+  return { preset: isTouch ? 'mobile' : 'desktop', reason: 'Sugerido equilibrado por performance/dispositivo.' };
+}
+
 function initTuningPanel() {
+  let initialized = false;
   try {
     tuning.density = Number(localStorage.getItem('tdf3_tune_density') || 1) || 1;
     tuning.delayMul = Number(localStorage.getItem('tdf3_tune_delay') || 1) || 1;
     tuning.damageMul = Number(localStorage.getItem('tdf3_tune_damage') || 1) || 1;
+    initialized = localStorage.getItem('tdf3_tune_initialized') === '1';
   } catch {}
 
   if ($tuneDensity) {
@@ -558,7 +611,21 @@ function initTuningPanel() {
   }
   if ($btnTunePresetNormal) $btnTunePresetNormal.addEventListener('click', () => applyTuningPreset('normal'));
   if ($btnTunePresetHard) $btnTunePresetHard.addEventListener('click', () => applyTuningPreset('hard'));
-  refreshTuningUiLabels();
+  if ($btnTunePresetMobile) $btnTunePresetMobile.addEventListener('click', () => applyTuningPreset('mobile'));
+  if ($btnTunePresetDesktop) $btnTunePresetDesktop.addEventListener('click', () => applyTuningPreset('desktop'));
+  if ($btnTuneSuggest) {
+    $btnTuneSuggest.addEventListener('click', () => {
+      const suggestion = computeSuggestedTuningFromRuns(readRecentRuns());
+      applyTuningPreset(suggestion.preset, { persist: false, reason: suggestion.reason });
+    });
+  }
+
+  if (!initialized) {
+    applyTuningPreset(isTouch ? 'mobile' : 'desktop', { reason: 'Inicializado por perfil de dispositivo.' });
+  } else {
+    refreshTuningUiLabels();
+    if ($tuneSuggestion) $tuneSuggestion.textContent = 'Tuning manual activo. Podés usar auto-balance sugerido.';
+  }
 }
 
 function initSettingsMenu() {
