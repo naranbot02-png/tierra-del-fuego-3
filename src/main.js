@@ -1,5 +1,6 @@
 import * as THREE from 'https://unpkg.com/three@0.182.0/build/three.module.js';
-import { stepExtractionProgress } from './extraction.js';
+import { stepMissionCore } from './mission/core.js';
+import { applyMissionEffects } from './mission/effects.js';
 import {
   getKeyboardIntentAxes,
   getTouchIntentAxes,
@@ -957,120 +958,29 @@ function resetMission(manual = false) {
 }
 
 function updateMission(dt){
-  if (mission.phase === 'prep') {
-    mission.prepLeft = Math.max(0, mission.prepLeft - dt);
-    if (mission.prepLeft <= 0) {
-      mission.phase = 'playing';
-      sfxStart();
-      if ($tip) {
-        $tip.textContent = isTouch
-          ? '¡Ventana táctica abierta! Stick al máximo = sprint táctico.'
-          : '¡Ventana táctica abierta! Shift = sprint táctico.';
-        $tip.style.display = 'block';
-        if (isTouch) setTimeout(() => { if (mission.phase === 'playing') $tip.style.display = 'none'; }, 1000);
-      }
-    }
-  } else if (mission.phase === 'playing') {
-    mission.timeLeft = Math.max(0, mission.timeLeft - dt);
-    const threat = getThreatLevel(mission);
+  const dx = state.pos.x - EXTRACTION_POINT.x;
+  const dz = state.pos.z - EXTRACTION_POINT.y;
+  const insideExtractionZone = Math.hypot(dx, dz) <= mission.extractionRadius;
 
-    if (!feedbackFlags.warnedThreat2 && threat.id >= 2) {
-      feedbackFlags.warnedThreat2 = true;
-      beep({ freq: 560, duration: 0.06, type: 'triangle', gain: 0.024 });
-      if ($tip) {
-        $tip.textContent = 'Amenaza II: drones más agresivos.';
-        $tip.style.display = 'block';
-        if (isTouch) setTimeout(() => { if (mission.phase === 'playing') $tip.style.display = 'none'; }, 850);
-      }
-    }
-    if (!feedbackFlags.warnedThreat3 && threat.id >= 3) {
-      feedbackFlags.warnedThreat3 = true;
-      beep({ freq: 300, duration: 0.08, type: 'sawtooth', gain: 0.03 });
-      setTimeout(() => beep({ freq: 250, duration: 0.1, type: 'sawtooth', gain: 0.028 }), 80);
-      if (isTouch && navigator.vibrate) navigator.vibrate([16, 44, 16]);
-      if ($tip) {
-        $tip.textContent = 'Amenaza III: máxima presión.';
-        $tip.style.display = 'block';
-        if (isTouch) setTimeout(() => { if (mission.phase === 'playing') $tip.style.display = 'none'; }, 1000);
-      }
-    }
+  const { events } = stepMissionCore({
+    mission,
+    feedbackFlags,
+    dt,
+    playerHp: state.hp,
+    insideExtractionZone,
+  });
 
-    if (!feedbackFlags.warned30 && mission.timeLeft <= 30) {
-      feedbackFlags.warned30 = true;
-      beep({ freq: 520, duration: 0.06, type: 'triangle', gain: 0.026 });
-    }
-    if (!feedbackFlags.warned15 && mission.timeLeft <= 15) {
-      feedbackFlags.warned15 = true;
-      beep({ freq: 360, duration: 0.08, type: 'sawtooth', gain: 0.03 });
-      setTimeout(() => beep({ freq: 280, duration: 0.1, type: 'sawtooth', gain: 0.028 }), 90);
-    }
-    if (!feedbackFlags.warnedLowHp && state.hp <= 25) {
-      feedbackFlags.warnedLowHp = true;
-      beep({ freq: 200, duration: 0.08, type: 'square', gain: 0.03 });
-      if (isTouch && navigator.vibrate) navigator.vibrate([20, 60, 20]);
-    }
-
-    if (!mission.extractionReady && mission.kills >= mission.targetKills) {
-      mission.extractionReady = true;
-      mission.extractionProgress = 0;
-      mission.extractionInside = false;
-      mission.extractionOutGraceLeft = mission.extractionOutGraceDuration;
-      beep({ freq: 660, duration: 0.06, type: 'triangle', gain: 0.028 });
-      setTimeout(() => beep({ freq: 920, duration: 0.07, type: 'triangle', gain: 0.028 }), 65);
-      if (isTouch && navigator.vibrate) navigator.vibrate(18);
-      if ($tip) {
-        $tip.textContent = 'Objetivo actualizado: volvé al faro para extraer.';
-        $tip.style.display = 'block';
-        if (isTouch) setTimeout(() => { if (mission.phase === 'playing' && mission.extractionReady) $tip.style.display = 'none'; }, 1100);
-      }
-    }
-
-    if (mission.extractionReady) {
-      const dx = state.pos.x - EXTRACTION_POINT.x;
-      const dz = state.pos.z - EXTRACTION_POINT.y;
-      const inside = Math.hypot(dx, dz) <= mission.extractionRadius;
-      const wasInside = mission.extractionInside;
-
-      const extractionStep = stepExtractionProgress({
-        progress: mission.extractionProgress,
-        inside,
-        dt,
-        duration: mission.extractionDuration,
-        decayRate: 0.72,
-        outGraceLeft: mission.extractionOutGraceLeft,
-        outGraceDuration: mission.extractionOutGraceDuration,
-      });
-
-      mission.extractionProgress = extractionStep.progress;
-      mission.extractionInside = extractionStep.inside;
-      mission.extractionOutGraceLeft = extractionStep.outGraceLeft;
-
-      if (!wasInside && mission.extractionInside) {
-        beep({ freq: 740, duration: 0.05, type: 'triangle', gain: 0.024 });
-        if (isTouch && navigator.vibrate) navigator.vibrate(12);
-      }
-
-      if (mission.extractionProgress >= mission.extractionDuration) {
-        mission.phase = 'result';
-        mission.result = 'win';
-        sfxWin();
-        if ($tip) {
-          $tip.textContent = 'Extracción confirmada. R para reiniciar.';
-          $tip.style.display = 'block';
-        }
-      }
-    }
-
-    if ((mission.timeLeft <= 0 || state.hp <= 0) && mission.phase === 'playing') {
-      mission.phase = 'result';
-      mission.result = 'lose';
-      sfxLose();
-      if ($tip) {
-        $tip.textContent = 'Misión fallida. R para reintentar.';
-        $tip.style.display = 'block';
-      }
-    }
-  }
+  applyMissionEffects({
+    events,
+    mission,
+    isTouch,
+    tipEl: $tip,
+    beep,
+    sfxStart,
+    sfxWin,
+    sfxLose,
+    vibrate: navigator.vibrate?.bind(navigator),
+  });
 
   const threat = getThreatLevel(mission);
   renderHudText({
