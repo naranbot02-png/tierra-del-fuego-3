@@ -64,9 +64,10 @@ export function renderHudText({ mission, hp, isTouch, threat, extractionDistance
       } else {
         const waveTag = `${currentWaveIndex + 1}/${totalWaves}`;
         const directorTag = directorMode === 'pressure' ? '↑' : (directorMode === 'calm' ? '↓' : '·');
+        const eta = pendingWaveActive ? ` · T-${Math.max(0, pendingWaveDelay).toFixed(1)}s` : '';
         missionStatusEl.textContent = isTouch
-          ? `Oleada ${waveTag} ${directorTag}`
-          : `Oleada ${waveTag} · ${currentWaveName} · dir ${directorMode}`;
+          ? `Oleada ${waveTag} ${directorTag}${eta}`
+          : `Oleada ${waveTag} · ${currentWaveName}${eta} · dir ${directorMode}`;
       }
     } else {
       missionStatusEl.textContent = mission.result === 'win' ? 'Completada' : 'Fallida';
