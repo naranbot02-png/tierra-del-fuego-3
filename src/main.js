@@ -132,6 +132,12 @@ const metalMat = new THREE.MeshStandardMaterial({
   roughness: 0.74,
   metalness: 0.2,
 });
+const wallMat = new THREE.MeshStandardMaterial({
+  color: 0xe3ebf4,
+  map: txBeamWall,
+  roughness: 0.76,
+  metalness: 0.14,
+});
 const lightMat = new THREE.MeshStandardMaterial({ color: 0xcdd9e8, map: txBlueMetalPlate, roughness: 0.28, metalness: 0.14, emissive: 0x0b1220, emissiveIntensity: 0.28 });
 
 const ground = new THREE.Mesh(new THREE.PlaneGeometry(240, 240), groundMat);
@@ -260,17 +266,17 @@ function addWall(x, y, z, w, h, d, mat) {
   return addBox(x, y, z, w, h, d, mat, { solid: true, colliderTag: 'wall' });
 }
 
-addWall(0, 1.2, 2, 30, 2.4, 1.0, metalMat);
-addWall(8, 1.2, 9, 1.0, 2.4, 14, metalMat);
-addWall(-10, 1.2, 13, 18, 2.4, 1.0, metalMat);
-addWall(-18, 1.2, 2, 1.0, 2.4, 28, metalMat);
-addWall(10, 1.2, -6, 28, 2.4, 1.0, metalMat);
+addWall(0, 1.2, 2, 30, 2.4, 1.0, wallMat);
+addWall(8, 1.2, 9, 1.0, 2.4, 14, wallMat);
+addWall(-10, 1.2, 13, 18, 2.4, 1.0, wallMat);
+addWall(-18, 1.2, 2, 1.0, 2.4, 28, wallMat);
+addWall(10, 1.2, -6, 28, 2.4, 1.0, wallMat);
 
 // --- Main map blockout v1: perímetro + núcleo + corredor al faro
-addWall(0, 1.2, -30, 62, 2.4, 1.0, metalMat); // perímetro sur
-addWall(0, 1.2, 32, 62, 2.4, 1.0, metalMat); // perímetro norte
-addWall(-31, 1.2, 1, 1.0, 2.4, 62, metalMat); // perímetro oeste
-addWall(31, 1.2, 1, 1.0, 2.4, 62, metalMat); // perímetro este
+addWall(0, 1.2, -30, 62, 2.4, 1.0, wallMat); // perímetro sur
+addWall(0, 1.2, 32, 62, 2.4, 1.0, wallMat); // perímetro norte
+addWall(-31, 1.2, 1, 1.0, 2.4, 62, wallMat); // perímetro oeste
+addWall(31, 1.2, 1, 1.0, 2.4, 62, wallMat); // perímetro este
 
 const zonePerimeter = new THREE.Mesh(
   new THREE.RingGeometry(22, 30, 56),
@@ -282,14 +288,14 @@ scene.add(zonePerimeter);
 
 const zoneCore = new THREE.Mesh(
   new THREE.CircleGeometry(9, 32),
-  new THREE.MeshBasicMaterial({ color: 0x22c55e, transparent: true, opacity: 0.10, side: THREE.DoubleSide })
+  new THREE.MeshBasicMaterial({ color: 0x67d59b, map: txAntiSlipConcrete, transparent: true, opacity: 0.12, side: THREE.DoubleSide })
 );
 zoneCore.rotation.x = -Math.PI / 2;
 zoneCore.position.set(-2, 0.03, 4);
 scene.add(zoneCore);
 
-addWall(-6, 0.8, 16, 12, 1.6, 0.8, metalMat); // cuello ruta norte
-addWall(10, 0.8, 20, 8, 1.6, 0.8, metalMat); // lateral ruta faro
+addWall(-6, 0.8, 16, 12, 1.6, 0.8, wallMat); // cuello ruta norte
+addWall(10, 0.8, 20, 8, 1.6, 0.8, wallMat); // lateral ruta faro
 
 const routeMat = new THREE.MeshBasicMaterial({ color: 0x7dd3fc, map: txAntiSlipConcrete, transparent: true, opacity: 0.2 });
 addBox(-10, 0.04, 8, 16, 0.08, 2.2, routeMat);   // ruta spawn -> núcleo
