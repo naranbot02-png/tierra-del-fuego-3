@@ -122,6 +122,8 @@ const txBlueFloorTiles = loadTiledTexture('./assets/library/textures/blue_floor_
 const txBeamWall = loadTiledTexture('./assets/library/textures/beam_wall_01_diff_1k.jpg', 2.8, 2.8, 2); // 12
 const txSeaSurface = loadTiledTexture('./assets/library/textures/blue_floor_tiles_01_diff_1k.jpg', 10, 4, 1); // 13
 const txCoastRock = loadTiledTexture('./assets/library/textures/broken_wall_diff_1k.jpg', 12, 2, 1); // 14
+const txMountainRock = loadTiledTexture('./assets/library/textures/aerial_ground_rock_diff_1k.jpg', 3.2, 2.2, 1); // 15
+const txMountainSnow = loadTiledTexture('./assets/library/textures/asphalt_snow_diff_1k.jpg', 2.6, 2.6, 1); // 16
 
 const groundMat = new THREE.MeshStandardMaterial({ color: 0xf3f7ff, map: txAsphalt, roughness: 0.93, metalness: 0.05 });
 const iceMat = new THREE.MeshStandardMaterial({ color: 0x8494a8, map: txBrushedConcrete, roughness: 0.84, metalness: 0.04 });
@@ -195,10 +197,10 @@ const mountainNear = new THREE.Group();
 const mountainMid = new THREE.Group();
 const mountainFar = new THREE.Group();
 
-const mountainNearMat = new THREE.MeshBasicMaterial({ color: 0x556474, transparent: true, opacity: 0.88 });
-const mountainMidMat = new THREE.MeshBasicMaterial({ color: 0x657586, transparent: true, opacity: 0.76 });
-const mountainFarMat = new THREE.MeshBasicMaterial({ color: 0x7d8c9a, transparent: true, opacity: 0.62 });
-const snowCapMat = new THREE.MeshBasicMaterial({ color: 0xdde7ef, transparent: true, opacity: 0.72 });
+const mountainNearMat = new THREE.MeshBasicMaterial({ color: 0x708191, map: txMountainRock, transparent: true, opacity: 0.88 });
+const mountainMidMat = new THREE.MeshBasicMaterial({ color: 0x8593a2, map: txMountainRock, transparent: true, opacity: 0.76 });
+const mountainFarMat = new THREE.MeshBasicMaterial({ color: 0x9aa6b3, map: txMountainRock, transparent: true, opacity: 0.62 });
+const snowCapMat = new THREE.MeshBasicMaterial({ color: 0xe5edf4, map: txMountainSnow, transparent: true, opacity: 0.72 });
 
 function addRidge(group, material, x, z, w, h, rot = 0) {
   const ridge = new THREE.Mesh(new THREE.ConeGeometry(w * 0.5, h, 3), material);
