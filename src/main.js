@@ -250,8 +250,17 @@ function registerBoxCollider(x, y, z, w, h, d, tag = 'solid') {
 }
 
 function addBox(x, y, z, w, h, d, mat, opts = {}) {
-  const { solid = false, colliderTag = 'solid' } = opts;
-  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+  const { solid = false, colliderTag = 'solid', tile = null } = opts;
+  let resolvedMat = mat;
+  if (tile && mat?.map) {
+    resolvedMat = mat.clone();
+    resolvedMat.map = mat.map.clone();
+    resolvedMat.map.wrapS = THREE.RepeatWrapping;
+    resolvedMat.map.wrapT = THREE.RepeatWrapping;
+    resolvedMat.map.repeat.set(tile[0], tile[1]);
+    resolvedMat.map.needsUpdate = true;
+  }
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), resolvedMat);
   m.position.set(x, y, z);
   scene.add(m);
 
@@ -263,7 +272,9 @@ function addBox(x, y, z, w, h, d, mat, opts = {}) {
 }
 
 function addWall(x, y, z, w, h, d, mat) {
-  return addBox(x, y, z, w, h, d, mat, { solid: true, colliderTag: 'wall' });
+  const tileX = Math.max(1, Math.round(Math.max(w, d) / 3));
+  const tileY = Math.max(1, Math.round(h / 1.2));
+  return addBox(x, y, z, w, h, d, mat, { solid: true, colliderTag: 'wall', tile: [tileX, tileY] });
 }
 
 addWall(0, 1.2, 2, 30, 2.4, 1.0, wallMat);
@@ -305,14 +316,15 @@ addBox(3, 0.04, 20, 10, 0.08, 2.2, routeMat);    // ruta norte -> faro
 // Mapa v2: identidad industrial + coberturas + landmarks
 const hazardMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, map: txBrownFloorTiles, roughness: 0.62, metalness: 0.18, emissive: 0x2b1808, emissiveIntensity: 0.14 });
 const darkPanelMat = new THREE.MeshStandardMaterial({ color: 0xf1f5f9, map: txBrushedConcrete, roughness: 0.72, metalness: 0.12 });
+const coverMat = new THREE.MeshStandardMaterial({ color: 0xe6edf5, map: txBrickWall12, roughness: 0.74, metalness: 0.1 });
 
 // Landmark 1: torre de enfriamiento en núcleo
-addBox(-2, 3.2, 4, 3.4, 6.4, 3.4, darkPanelMat, { solid: true, colliderTag: 'cover' });
+addBox(-2, 3.2, 4, 3.4, 6.4, 3.4, coverMat, { solid: true, colliderTag: 'cover', tile: [2, 4] });
 addBox(-2, 6.8, 4, 4.4, 0.35, 4.4, hazardMat);
 
 // Landmark 2: depósitos industriales cerca del corredor norte
-addBox(12, 1.05, 14, 4.2, 2.1, 2.8, metalMat, { solid: true, colliderTag: 'cover' });
-addBox(16, 1.05, 17, 4.2, 2.1, 2.8, metalMat, { solid: true, colliderTag: 'cover' });
+addBox(12, 1.05, 14, 4.2, 2.1, 2.8, coverMat, { solid: true, colliderTag: 'cover', tile: [3, 2] });
+addBox(16, 1.05, 17, 4.2, 2.1, 2.8, coverMat, { solid: true, colliderTag: 'cover', tile: [3, 2] });
 addBox(14, 2.25, 15.5, 8.8, 0.2, 3.2, hazardMat);
 
 // Choke táctico: barreras en zig-zag hacia faro
@@ -320,8 +332,8 @@ addWall(-4, 1.0, 18.2, 4.8, 2.0, 0.8, metalMat);
 addWall(2.5, 1.0, 20.5, 4.8, 2.0, 0.8, metalMat);
 
 // Coberturas de perímetro para alternar rutas
-addBox(-20, 1.0, -8, 3.2, 2.0, 1.2, darkPanelMat, { solid: true, colliderTag: 'cover' });
-addBox(22, 1.0, 6, 3.2, 2.0, 1.2, darkPanelMat, { solid: true, colliderTag: 'cover' });
+addBox(-20, 1.0, -8, 3.2, 2.0, 1.2, coverMat, { solid: true, colliderTag: 'cover', tile: [2, 2] });
+addBox(22, 1.0, 6, 3.2, 2.0, 1.2, coverMat, { solid: true, colliderTag: 'cover', tile: [2, 2] });
 
 // Ruta riesgo/recompensa: rápida (expuesta) vs segura (coberturas)
 const fastRouteMat = new THREE.MeshBasicMaterial({ color: 0xea7a3d, map: txBrickFloor003, transparent: true, opacity: 0.16 });
@@ -330,8 +342,8 @@ const safeRouteMat = new THREE.MeshBasicMaterial({ color: 0x66ce8e, map: txBrick
 const fastRoutePosts = [];
 const safeRoutePosts = [];
 function addRoutePost(x, z, type = 'fast') {
-  const mat = type === 'fast' ? hazardMat : darkPanelMat;
-  const post = addBox(x, 0.8, z, 0.28, 1.6, 0.28, mat);
+  const mat = type === 'fast' ? hazardMat : coverMat;
+  const post = addBox(x, 0.8, z, 0.28, 1.6, 0.28, mat, { tile: [1, 2] });
   (type === 'fast' ? fastRoutePosts : safeRoutePosts).push(post);
 }
 
@@ -339,8 +351,8 @@ addBox(8, 0.035, 10, 24, 0.07, 1.5, fastRouteMat);      // rápida y expuesta ha
 addBox(-14, 0.035, 10, 10, 0.07, 1.5, safeRouteMat);    // segura (más larga)
 addBox(-18, 0.035, 16, 8, 0.07, 1.5, safeRouteMat);
 addBox(-10, 0.035, 22, 10, 0.07, 1.5, safeRouteMat);
-addBox(-16, 1.0, 12, 2.6, 2.0, 1.1, darkPanelMat, { solid: true, colliderTag: 'cover' });
-addBox(-12, 1.0, 18, 2.6, 2.0, 1.1, darkPanelMat, { solid: true, colliderTag: 'cover' });
+addBox(-16, 1.0, 12, 2.6, 2.0, 1.1, coverMat, { solid: true, colliderTag: 'cover', tile: [2, 2] });
+addBox(-12, 1.0, 18, 2.6, 2.0, 1.1, coverMat, { solid: true, colliderTag: 'cover', tile: [2, 2] });
 
 for (const [x, z] of [[-2, 10], [4, 10], [10, 10], [16, 10], [20, 10]]) addRoutePost(x, z, 'fast');
 for (const [x, z] of [[-18, 10], [-18, 16], [-14, 22], [-10, 22]]) addRoutePost(x, z, 'safe');
